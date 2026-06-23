@@ -513,3 +513,146 @@ html, body {
   color: var(--pink-deep);
   text-shadow: none;
 }
+
+/* ================= Boss Battle (mini-game) ================= */
+
+/* mega-boss: much bigger than normal, with an ominous aura */
+.enemy.mega {
+  width: 28%;
+  height: 92%;
+  z-index: 15;
+  filter: drop-shadow(0 0 12px rgba(150, 50, 200, .85));
+  animation: megafloat 2.6s ease-in-out infinite;
+}
+.enemy.mega .hpbar { display: none; } /* shown via the big boss bar instead */
+@keyframes megafloat { 50% { margin-top: -10px; } }
+
+/* boss energy shots (boss-shoot.gif) flying left at defenders */
+.enemy-proj {
+  width: 4%;
+  height: 9.5%;
+  z-index: 13;
+  filter: drop-shadow(0 0 6px rgba(170, 60, 230, .9));
+  animation: projspin .5s linear infinite;
+}
+.enemy-proj img { transform: scaleX(-1); }
+@keyframes projspin { 50% { transform: translate(-50%, -50%) scale(1.18); } }
+
+/* mega-boss death burst */
+.death-fx { width: 34%; height: 78%; z-index: 22; }
+.death-fx img { filter: drop-shadow(0 0 18px rgba(200, 80, 250, .95)); }
+
+/* big boss health bar (below the HUD) */
+.boss-bar {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-14px);
+  z-index: 29;
+  width: min(82vw, 680px);
+  padding: 8px 12px 10px;
+  background: rgba(30, 8, 36, .85);
+  border: 3px solid var(--ink);
+  border-radius: 0;
+  box-shadow: 0 0 0 3px #fff, 5px 5px 0 rgba(91, 39, 64, .45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s ease, transform .3s ease;
+}
+.boss-bar.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.boss-bar-name {
+  font-family: var(--pix);
+  font-size: .6rem;
+  color: #ffd6f5;
+  text-align: center;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 0 #000;
+  margin-bottom: 6px;
+}
+.boss-bar-track {
+  height: 16px;
+  background: rgba(0, 0, 0, .55);
+  border: 2px solid #2a0a3a;
+  overflow: hidden;
+}
+.boss-bar-track > i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ff3d7f, #b3155e);
+  transition: width .15s ease;
+}
+
+/* warning banner variant (dark/ominous) */
+.banner.warning {
+  background: rgba(30, 8, 36, .95);
+  color: #ff6ec7;
+  border-color: #2a0a3a;
+  text-shadow: 2px 2px 0 #000, 0 0 10px rgba(255, 60, 160, .8);
+  box-shadow: 0 0 0 4px #ffd6f5, 8px 8px 0 rgba(30, 8, 36, .6);
+}
+
+/* boss-mode HUD accents */
+.boss-mode .boss-pill {
+  color: #b3155e;
+  background: linear-gradient(180deg, #fff, #ffe0ee);
+  font-weight: bold;
+}
+
+/* boss-battle result overlay (reuses pause-overlay look) */
+.boss-result {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 8, 36, .55);
+  backdrop-filter: blur(5px);
+}
+.boss-result.show { display: flex; }
+.boss-result .box {
+  position: relative;
+  background: linear-gradient(180deg, #fff0f7 0%, #ffd9ec 100%);
+  border: 4px solid var(--ink);
+  border-radius: 0;
+  padding: 30px 46px 28px;
+  text-align: center;
+  box-shadow: 0 0 0 4px #fff, 10px 10px 0 rgba(91, 39, 64, .4);
+  animation: pausepop .35s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.boss-result .emoji { font-size: 3rem; line-height: 1; margin-bottom: 6px; }
+.boss-result h2 {
+  font-family: var(--pix);
+  color: var(--pink-deep);
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0 #fff;
+  margin-bottom: 12px;
+}
+.boss-result p {
+  font-size: .95rem;
+  color: var(--ink);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+.boss-result .row { display: flex; gap: 10px; justify-content: center; }
+.boss-result .pbtn {
+  cursor: pointer;
+  font-family: var(--pix);
+  font-size: .8rem;
+  color: #fff;
+  background: linear-gradient(180deg, var(--pink), var(--pink-deep));
+  padding: 13px 22px;
+  border: 3px solid var(--ink);
+  border-radius: 0;
+  box-shadow: 4px 4px 0 rgba(91, 39, 64, .4);
+  text-shadow: 1px 1px 0 rgba(91, 39, 64, .5);
+  text-decoration: none;
+}
+.boss-result .pbtn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 rgba(91, 39, 64, .4); }
+.boss-result .pbtn.alt {
+  background: linear-gradient(180deg, #fff, #ffe0ee);
+  color: var(--pink-deep);
+  text-shadow: none;
+}
