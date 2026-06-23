@@ -29,6 +29,11 @@
       kind: "shooter", interval: 2400, damage: 110, projSpeed: 0.75, cooldown: 9000,
       proj: A + "effects/canon-ball.gif", arc: true, arcVy: -34, arcG: 70,
     },
+    soldier: {
+      name: "Soldier Cat", cost: 200, hp: 220, img: A + "characters/soldier-cat-charachter.gif",
+      kind: "shooter", interval: 700, damage: 38, projSpeed: 1.15, cooldown: 7000,
+      proj: A + "effects/solider-cat-attack.gif", // rapid-fire rifle
+    },
     wall: {
       name: "Kitty Wall", cost: 75, hp: 1500, img: A + "characters/wall.gif",
       kind: "wall", cooldown: 8000, // pure blocker: no attack, just soaks damage
@@ -336,7 +341,7 @@
   function placeDefender(key, r, c) {
     const cfg = DEFENDERS[key];
     const el = document.createElement("div");
-    el.className = "entity defender";
+    el.className = "entity defender def-" + key;
     el.style.left = xToLeft(colCenterX(c)) + "%";
     el.style.top = rowToTop(r) + "%";
     // The flower plays its bloom once and holds the final frame. Browsers share
@@ -523,10 +528,22 @@
     if (en.hp <= 0) killEnemy(en);
   }
 
+  // burst shown when a normal minion (fox/bear) dies
+  function spawnMinionDeath(en) {
+    const el = document.createElement("div");
+    el.className = "entity minion-death";
+    el.style.left = en.el.style.left;
+    el.style.top = en.el.style.top;
+    el.innerHTML = `<img src="${A}effects/minion-death-efect.gif" alt="" />`;
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), 800);
+  }
+
   function killEnemy(en) {
     state.score += en.cfg.score;
     addStars(Math.round(en.cfg.reward * 0.4));
     floatText("+" + Math.round(en.cfg.reward * 0.4), en.x, rowToTop(en.row) / 100, "#fff");
+    if (!en.cfg.boss) spawnMinionDeath(en);
     en.dead = true;
     en.el.style.transition = "opacity .3s, transform .3s";
     en.el.style.opacity = "0";

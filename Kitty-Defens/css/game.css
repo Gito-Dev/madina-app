@@ -204,6 +204,7 @@ html, body {
   filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .35));
 }
 .defender { width: 12%; height: 28%; }
+.defender.def-kitty { width: 15.5%; height: 35%; } /* Kitty Mage stands bigger */
 .defender.removable { pointer-events: auto; }
 .enemy { width: 8%; height: 20%; }
 .enemy.boss { width: 13%; height: 30%; }
@@ -247,11 +248,11 @@ html, body {
 }
 
 .projectile {
-  width: 3.2%;
-  height: 8%;
+  width: 5%;
+  height: 12.5%;
   z-index: 13;
 }
-.projectile.ball { width: 4.6%; height: 11%; }
+.projectile.ball { width: 7%; height: 16%; }
 
 /* health bars */
 .hpbar {
@@ -308,6 +309,10 @@ html, body {
 
 .hit-flash { animation: flash .15s linear; }
 @keyframes flash { 50% { filter: brightness(2.2) drop-shadow(0 0 6px #fff); } }
+
+/* burst played when a normal minion dies */
+.minion-death { width: 11%; height: 26%; z-index: 21; }
+.minion-death img { filter: drop-shadow(0 0 8px rgba(200, 120, 255, .8)); }
 
 /* ghost preview when placing */
 .ghost {
@@ -516,30 +521,32 @@ html, body {
 
 /* ================= Boss Battle (mini-game) ================= */
 
-/* mega-boss: much bigger than normal, with an ominous aura */
+/* mega-boss: towering over the lanes, with a huge ominous aura */
 .enemy.mega {
-  width: 28%;
-  height: 92%;
+  width: 62%;
+  height: 168%;
   z-index: 15;
-  filter: drop-shadow(0 0 12px rgba(150, 50, 200, .85));
+  filter: drop-shadow(0 0 42px rgba(170, 60, 230, .95))
+          drop-shadow(0 0 20px rgba(255, 80, 200, .7));
   animation: megafloat 2.6s ease-in-out infinite;
 }
+.enemy.mega img { transform: scaleX(1); } /* flip to face the other way (toward the portal) */
 .enemy.mega .hpbar { display: none; } /* shown via the big boss bar instead */
 @keyframes megafloat { 50% { margin-top: -10px; } }
 
 /* boss energy shots (boss-shoot.gif) flying left at defenders */
 .enemy-proj {
-  width: 4%;
-  height: 9.5%;
+  width: 13.5%;
+  height: 29%;
   z-index: 13;
-  filter: drop-shadow(0 0 6px rgba(170, 60, 230, .9));
+  filter: drop-shadow(0 0 20px rgba(170, 60, 230, .95));
   animation: projspin .5s linear infinite;
 }
 .enemy-proj img { transform: scaleX(-1); }
 @keyframes projspin { 50% { transform: translate(-50%, -50%) scale(1.18); } }
 
 /* mega-boss death burst */
-.death-fx { width: 34%; height: 78%; z-index: 22; }
+.death-fx { width: 52%; height: 124%; z-index: 22; }
 .death-fx img { filter: drop-shadow(0 0 18px rgba(200, 80, 250, .95)); }
 
 /* big boss health bar (below the HUD) */
@@ -598,6 +605,64 @@ html, body {
   background: linear-gradient(180deg, #fff, #ffe0ee);
   font-weight: bold;
 }
+
+/* ambient purple glow along the bottom + sides; fades in occasionally */
+.boss-ambience {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(to top,   rgba(150, 40, 220, .38) 0%, transparent 20%),
+    linear-gradient(to right, rgba(150, 40, 220, .30) 0%, transparent 11%),
+    linear-gradient(to left,  rgba(150, 40, 220, .30) 0%, transparent 11%);
+  animation: bossGlow 9s ease-in-out infinite;
+}
+@keyframes bossGlow {
+  0%, 58%  { opacity: 0; }
+  76%      { opacity: 1; }
+  100%     { opacity: 0; }
+}
+
+/* castle integrity bar (bottom-left, boss battle) */
+.castle-bar {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  z-index: 29;
+  width: min(40vw, 280px);
+  padding: 7px 10px 9px;
+  background: rgba(30, 8, 36, .82);
+  border: 3px solid var(--ink);
+  box-shadow: 0 0 0 3px #fff, 4px 4px 0 rgba(91, 39, 64, .45);
+}
+.castle-bar-label {
+  font-family: var(--pix);
+  font-size: .54rem;
+  color: #ffd6f5;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 0 #000;
+  margin-bottom: 6px;
+}
+.castle-bar-track {
+  height: 14px;
+  background: rgba(0, 0, 0, .55);
+  border: 2px solid #2a0a3a;
+  overflow: hidden;
+}
+.castle-bar-track > i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #58d977, #2fae53);
+  transition: width .15s ease;
+}
+.castle-bar.low .castle-bar-track > i {
+  background: linear-gradient(90deg, #ff8a8a, #e23e3e);
+  animation: castlePulse .6s ease-in-out infinite;
+}
+@keyframes castlePulse { 50% { filter: brightness(1.4); } }
 
 /* boss-battle result overlay (reuses pause-overlay look) */
 .boss-result {

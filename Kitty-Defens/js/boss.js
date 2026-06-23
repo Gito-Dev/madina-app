@@ -30,6 +30,11 @@
       kind: "shooter", interval: 2400, damage: 110, projSpeed: 0.75, cooldown: 9000,
       proj: A + "effects/canon-ball.gif", arc: true, arcVy: -34, arcG: 70,
     },
+    soldier: {
+      name: "Soldier Cat", cost: 200, hp: 220, img: A + "characters/soldier-cat-charachter.gif",
+      kind: "shooter", interval: 700, damage: 38, projSpeed: 1.15, cooldown: 7000,
+      proj: A + "effects/solider-cat-attack.gif", // rapid-fire rifle
+    },
     wall: {
       name: "Kitty Wall", cost: 75, hp: 1500, img: A + "characters/wall.gif",
       kind: "wall", cooldown: 8000,
@@ -44,10 +49,10 @@
 
   // ---------- The Mega Boss ----------
   const MEGA = {
-    name: "Mega Boss — Ryuk", hp: 3500, speed: 0.012, dps: 140, reward: 600, score: 1000,
+    name: "Ryuk — God of Death", hp: 5000, speed: 0.008, dps: 170, reward: 800, score: 1500,
     img: B + "mega-boss.gif", boss: true, mega: true,
-    shootInterval: 2600, shootDamage: 48, projSpeed: 0.5, proj: B + "boss-shoot.gif",
-    summonInterval: 6500, death: B + "mega-boss-death-effect.gif",
+    shootInterval: 2600, shootDamage: 58, projSpeed: 0.5, proj: B + "boss-shoot.gif",
+    summonInterval: 6500, laneSwapMs: 3600, death: B + "mega-boss-death-effect.gif",
   };
 
   // ---------- Icons (inline SVG) ----------
@@ -74,7 +79,6 @@
   const ghost = document.getElementById("ghost");
   const ghostImg = ghost.querySelector("img");
   const starsEl = document.getElementById("stars");
-  const livesEl = document.getElementById("lives");
   const scoreEl = document.getElementById("score");
   const banner = document.getElementById("banner");
   const startBtn = document.getElementById("startBtn");
@@ -85,8 +89,9 @@
 
   // ---------- State ----------
   const state = {
-    stars: 250,
-    lives: 5,
+    stars: 425,
+    castleHp: 250,
+    castleMaxHp: 250,
     score: 0,
     selected: null,
     upg: { damage: 0, health: 0, income: 0 },
@@ -300,7 +305,7 @@
   function placeDefender(key, r, c) {
     const cfg = DEFENDERS[key];
     const el = document.createElement("div");
-    el.className = "entity defender";
+    el.className = "entity defender def-" + key;
     el.style.left = xToLeft(colCenterX(c)) + "%";
     el.style.top = rowToTop(r) + "%";
     const imgSrc = cfg.kind === "producer" ? cfg.img + "?i=" + (++defUid) : cfg.img;
@@ -373,7 +378,6 @@
 
   function updateHud() {
     starsEl.textContent = state.stars;
-    livesEl.innerHTML = ICON_HEART.repeat(Math.max(0, state.lives));
     scoreEl.textContent = state.score;
     [...shop.children].forEach((c) => {
       const key = c.dataset.key;
@@ -454,6 +458,10 @@
     if (cfg.mega) {
       en.shootTimer = cfg.shootInterval;
       en.summonTimer = cfg.summonInterval;
+      en.topRow = row;        // smooth vertical position (fractional lane)
+      en.targetRow = row;     // lane it is drifting toward
+      en.laneDir = 1;
+      en.laneTimer = cfg.laneSwapMs;
       el.animate([{ transform: "translate(-50%,-50%) scale(0)", opacity: 0 },
                   { transform: "translate(-50%,-50%) scale(1.12)", opacity: 1 },
                   { transform: "translate(-50%,-50%) scale(1)" }],
@@ -505,6 +513,7 @@
       }
       setTimeout(() => endFight(true), 1400);
     } else {
+      spawnMinionDeath(en);
       en.el.style.transition = "opacity .3s, transform .3s";
       en.el.style.opacity = "0";
       en.el.style.transform = "translate(-50%,-50%) scale(.4) rotate(20deg)";
@@ -537,10 +546,24 @@
   }
 
   function fireEnemyProjectile(boss) {
-    const rows = [];
-    for (let r = 0; r < ROWS; r++) if (state.grid[r].some(Boolean)) rows.push(r);
-    const row = rows.length ? rows[Math.floor(Math.random() * rows.length)]
-                            : Math.floor(Math.random() * ROWS);
+    // target priority: lanes with a wall/flower first, then any defender,
+    // and only if nothing is defending does the shot fly on to the castle.
+    const wallFlowerRows = [], anyDefRows = [];
+    for (let r = 0; r < ROWS; r++) {
+      let hasWF = false, hasAny = false;
+      for (let c = 0; c < COLS; c++) {
+        const d = state.grid[r][c];
+        if (!d) continue;
+        hasAny = true;
+        if (d.cfg.kind === "wall" || d.cfg.kind === "producer") hasWF = true;
+      }
+      if (hasWF) wallFlowerRows.push(r);
+      if (hasAny) anyDefRows.push(r);
+    }
+    const pool = wallFlowerRows.length ? wallFlowerRows
+               : (anyDefRows.length ? anyDefRows : null);
+    const row = pool ? pool[Math.floor(Math.random() * pool.length)]
+                     : Math.floor(Math.random() * ROWS);
     const x = boss.x - 0.05;
     const el = document.createElement("div");
     el.className = "entity enemy-proj";
@@ -572,6 +595,17 @@
     el.innerHTML = `<img src="${en.cfg.death}" alt="" />`;
     layer.appendChild(el);
     setTimeout(() => el.remove(), 1400);
+  }
+
+  // burst shown when a normal minion (fox/bear) dies
+  function spawnMinionDeath(en) {
+    const el = document.createElement("div");
+    el.className = "entity minion-death";
+    el.style.left = en.el.style.left;
+    el.style.top = en.el.style.top;
+    el.innerHTML = `<img src="${A}effects/minion-death-efect.gif" alt="" />`;
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), 800);
   }
 
   // ---------- Banner ----------
@@ -611,12 +645,35 @@
     showBanner(won ? "Victory!" : "Defeat", !won);
   }
 
-  function loseLife(n) {
-    state.lives -= (n || 1);
-    updateHud();
-    field.animate([{ filter: "brightness(1)" }, { filter: "brightness(1.5) hue-rotate(-20deg)" },
-                   { filter: "brightness(1)" }], { duration: 300 });
-    if (state.lives <= 0) endFight(false);
+  // ---------- Castle integrity ----------
+  let castleBarEl = null, castleBarFill = null;
+  function ensureCastleBar() {
+    if (castleBarEl) return;
+    castleBarEl = document.createElement("div");
+    castleBarEl.className = "castle-bar";
+    castleBarEl.innerHTML =
+      '<div class="castle-bar-label">\u{1F3F0} CASTLE</div>' +
+      '<div class="castle-bar-track"><i></i></div>';
+    document.body.appendChild(castleBarEl);
+    castleBarFill = castleBarEl.querySelector("i");
+    updateCastleBar();
+  }
+  function updateCastleBar() {
+    if (!castleBarFill) return;
+    const pct = Math.max(0, (state.castleHp / state.castleMaxHp) * 100);
+    castleBarFill.style.width = pct + "%";
+    castleBarEl.classList.toggle("low", pct <= 30);
+  }
+  function damageCastle(dmg, flash) {
+    if (state.over) return;
+    state.castleHp = Math.max(0, state.castleHp - dmg);
+    updateCastleBar();
+    if (flash) {
+      field.animate([{ filter: "brightness(1)" },
+                     { filter: "brightness(1.5) hue-rotate(-20deg)" },
+                     { filter: "brightness(1)" }], { duration: 250 });
+    }
+    if (state.castleHp <= 0) endFight(false);
   }
 
   function togglePause() {
@@ -715,7 +772,7 @@
     for (let i = state.enemyProjectiles.length - 1; i >= 0; i--) {
       const p = state.enemyProjectiles[i];
       p.x -= p.speed * dt;
-      let hit = false;
+      let done = false;
       const col = Math.floor(p.x * COLS);
       const def = (col >= 0 && col < COLS) ? state.grid[p.row][col] : null;
       if (def) {
@@ -725,9 +782,12 @@
           setTimeout(() => def.img && def.img.classList.remove("hit-flash"), 150);
         }
         if (def.hp <= 0) removeDefender(def);
-        hit = true;
+        done = true;
+      } else if (p.x <= 0.01) {
+        damageCastle(p.damage, true); // shot reached the far-left castle
+        done = true;
       }
-      if (hit || p.x < -0.05) {
+      if (done) {
         p.el.remove();
         state.enemyProjectiles.splice(i, 1);
       } else {
@@ -745,6 +805,19 @@
         if (e.shootTimer <= 0) { e.shootTimer = e.cfg.shootInterval; fireEnemyProjectile(e); }
         e.summonTimer -= dt * 1000;
         if (e.summonTimer <= 0) { e.summonTimer = e.cfg.summonInterval; summonMinions(e); }
+        // drift slowly up and down across all lanes
+        e.laneTimer -= dt * 1000;
+        if (e.laneTimer <= 0) {
+          e.laneTimer = e.cfg.laneSwapMs;
+          let next = e.targetRow + e.laneDir;
+          if (next < 0 || next > ROWS - 1) { e.laneDir *= -1; next = e.targetRow + e.laneDir; }
+          e.targetRow = next;
+        }
+        const vstep = 0.7 * dt; // lanes per second
+        if (e.topRow < e.targetRow) e.topRow = Math.min(e.targetRow, e.topRow + vstep);
+        else if (e.topRow > e.targetRow) e.topRow = Math.max(e.targetRow, e.topRow - vstep);
+        e.row = Math.round(e.topRow);
+        e.el.style.top = rowToTop(e.topRow) + "%";
       }
 
       const col = Math.floor(e.x * COLS);
@@ -752,20 +825,17 @@
       if (def) {
         def.hp -= e.cfg.dps * dt;
         if (def.hp <= 0) removeDefender(def);
+      } else if (e.mega && e.x <= 0.06) {
+        // the boss has broken through — it batters the castle gate
+        damageCastle(e.cfg.dps * dt);
       } else {
         e.x -= e.cfg.speed * dt;
       }
 
-      if (e.x <= 0.02) {
-        if (e.mega) {
-          // the boss breaching the castle is an instant loss
-          hideBossBar();
-          e.dead = true; e.el.remove(); state.enemies.splice(i, 1);
-          endFight(false);
-          continue;
-        }
+      // minions that slip past the defenders strike the castle directly
+      if (!e.mega && e.x <= 0.02) {
+        damageCastle(e.cfg === MINIONS.bear ? 18 : 10, true);
         e.dead = true; e.el.remove(); state.enemies.splice(i, 1);
-        loseLife();
         continue;
       }
       e.el.style.left = xToLeft(e.x) + "%";
@@ -822,6 +892,7 @@
 
   buildShop();
   updateHud();
+  ensureCastleBar();
   Object.entries(DEFENDERS).forEach(([key, d]) => {
     if (d.kind === "shooter") captureStatic(key, d.img);
   });

@@ -465,6 +465,14 @@ html, body {
 }
 .pixel-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 rgba(91, 39, 64, .4); }
 
+/* dark boss-battle entry button */
+.boss-btn {
+  background: linear-gradient(180deg, #7b2d8e 0%, #3a1147 100%);
+  color: #ffd6f5;
+  text-shadow: 1px 1px 0 #000;
+  margin-top: 2px;
+}
+
 /* hi-score / best-wave stat rows */
 .pm-stats { display: flex; flex-direction: column; gap: 8px; }
 .pm-stat {

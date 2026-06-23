@@ -37,6 +37,7 @@
       </div>
 
       <button class="btn pixel-btn" id="playBtn">&#9654; PLAY</button>
+      <button class="btn pixel-btn boss-btn" id="bossBtn">&#9760; BOSS BATTLE</button>
 
       <div class="pm-stats">
         <div class="pm-stat"><span class="pm-stat-k">HI-SCORE</span><b id="hiScore">0</b></div>
@@ -103,6 +104,10 @@
       var modal = document.getElementById("mapModal");
       document.getElementById("playBtn").addEventListener("click", function () {
         modal.classList.add("show");
+      });
+      var bossBtn = document.getElementById("bossBtn");
+      if (bossBtn) bossBtn.addEventListener("click", function () {
+        window.location.href = "Boss.html";
       });
       document.getElementById("mapClose").addEventListener("click", function () {
         modal.classList.remove("show");
