@@ -31,7 +31,7 @@
     },
     soldier: {
       name: "Soldier Cat", cost: 200, hp: 220, img: A + "characters/soldier-cat-charachter.gif",
-      kind: "shooter", interval: 700, damage: 38, projSpeed: 1.15, cooldown: 7000,
+      kind: "shooter", interval: 700, damage: 55, projSpeed: 1.15, cooldown: 7000,
       proj: A + "effects/solider-cat-attack.gif", // rapid-fire rifle
     },
     wall: {
