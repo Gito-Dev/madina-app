@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kitty Defense - Result</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <div class="screen result" id="screen">
+    <div class="result-panel glass">
+      <div class="newbest" id="newbest">&#9733; New High Score! &#9733;</div>
+
+      <p class="result-line" id="tagline"></p>
+
+      <div class="stat-grid">
+        <div class="stat"><div class="num" id="score">0</div><div class="lbl">Score</div></div>
+        <div class="stat"><div class="num" id="wave">0</div><div class="lbl">Waves</div></div>
+        <div class="stat"><div class="num" id="best">0</div><div class="lbl">Best</div></div>
+      </div>
+
+      <div class="result-btns">
+        <a class="btn" href="index.html" id="againBtn">Play Again</a>
+        <a class="btn secondary" href="index.html">Main Menu</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const won = params.get("result") === "win";
+    const score = parseInt(params.get("score") || "0", 10);
+    const wave = parseInt(params.get("wave") || "0", 10);
+    const mode = params.get("mode") || "8";
+    const isBest = params.get("best") === "1";
+    const highscore = parseInt(localStorage.getItem("kd_highscore") || "0", 10);
+
+    document.getElementById("score").textContent = score;
+    document.getElementById("wave").textContent = wave;
+    document.getElementById("best").textContent = highscore;
+
+    if (isBest && score > 0) document.getElementById("newbest").classList.add("show");
+
+    const screen = document.getElementById("screen");
+    const modeTxt = mode === "inf" ? "Endless mode" : (mode + " rounds");
+    if (won) {
+      document.title = "Kitty Defense - Victory!";
+      screen.classList.add("win");
+      document.getElementById("tagline").textContent =
+        "You defended the castle through all " + mode + " rounds!";
+    } else {
+      document.title = "Kitty Defense - Game Over";
+      screen.classList.add("lose");
+      document.getElementById("tagline").textContent =
+        "The critters broke through on wave " + wave + " (" + modeTxt + ").";
+    }
+
+    // "Play again" returns to the same battlefield they chose
+    var lastMap = localStorage.getItem("kd_map");
+    if (lastMap) document.getElementById("againBtn").setAttribute("href", "Home.html");
+  </script>
+  <script src="../js/music.js"></script>
+</body>
+</html>

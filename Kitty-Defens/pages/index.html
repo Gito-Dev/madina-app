@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kitty Defense</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <div class="screen home">
+    <!-- Speech bubble hovering above Hello Kitty (the main hero) -->
+    <div class="hero-bubble" id="heroBubble">
+      <p class="hb-line">Hey Madina, are you ready to have fun with me? &#128149;</p>
+      <p class="hb-line">And gito told me he loves you very much &#8212; and will do anything to make you happy! &#127800;</p>
+    </div>
+
+    <div class="card glass pixel-menu">
+      <div class="pm-title">&#127800; KITTY DEFENSE</div>
+
+      <div class="pm-block">
+        <label class="pm-label" for="playerName">Player</label>
+        <input class="pm-input" id="playerName" type="text" maxlength="10"
+               placeholder="ENTER NAME" autocomplete="off" spellcheck="false" />
+      </div>
+
+      <div class="pm-block">
+        <div class="pm-label">Choose Rounds</div>
+        <div class="mode-chips" id="modeChips">
+          <button class="chip" data-r="8">8</button>
+          <button class="chip" data-r="10">10</button>
+          <button class="chip" data-r="15">15</button>
+          <button class="chip" data-r="inf">&#8734;</button>
+        </div>
+      </div>
+
+      <button class="btn pixel-btn" id="playBtn">&#9654; PLAY</button>
+
+      <div class="pm-stats">
+        <div class="pm-stat"><span class="pm-stat-k">HI-SCORE</span><b id="hiScore">0</b></div>
+        <div class="pm-stat"><span class="pm-stat-k">BEST WAVE</span><b id="bestWave">0</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map / mode selection -->
+  <div class="map-modal" id="mapModal">
+    <div class="map-box">
+      <button class="modal-x" id="mapClose">&times;</button>
+      <h2 class="map-title">Choose your battlefield</h2>
+      <div class="map-cards">
+        <button class="map-card" data-map="maps/map-1.png">
+          <img src="../assets/maps/map-1.png" alt="Cherry Blossom" />
+          <span class="map-name">&#127800; Cherry Blossom</span>
+          <span class="map-tag">Sunny meadow</span>
+        </button>
+        <button class="map-card" data-map="maps/ice-map.webp">
+          <img src="../assets/maps/ice-map.webp" alt="Frozen Kingdom" />
+          <span class="map-name">&#10052;&#65039; Frozen Kingdom</span>
+          <span class="map-tag">Icy fields</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var chips = document.getElementById("modeChips");
+      var saved = localStorage.getItem("kd_rounds");
+      if (saved !== "inf" && saved !== "8" && saved !== "10" && saved !== "15") {
+        saved = "8";
+        localStorage.setItem("kd_rounds", saved);
+      }
+      function highlight() {
+        [].forEach.call(chips.children, function (c) {
+          c.classList.toggle("active", c.dataset.r === saved);
+        });
+      }
+      [].forEach.call(chips.children, function (c) {
+        c.addEventListener("click", function () {
+          saved = c.dataset.r;
+          localStorage.setItem("kd_rounds", saved);
+          highlight();
+        });
+      });
+      highlight();
+
+      var hs = parseInt(localStorage.getItem("kd_highscore") || "0", 10);
+      var bw = parseInt(localStorage.getItem("kd_bestwave") || "0", 10);
+      document.getElementById("hiScore").textContent = hs;
+      document.getElementById("bestWave").textContent = bw;
+
+      // ---------- Player name ----------
+      var nameInput = document.getElementById("playerName");
+      nameInput.value = localStorage.getItem("kd_player") || "";
+      nameInput.addEventListener("input", function () {
+        localStorage.setItem("kd_player", nameInput.value.trim());
+      });
+
+      // ---------- Map / mode selection ----------
+      var modal = document.getElementById("mapModal");
+      document.getElementById("playBtn").addEventListener("click", function () {
+        modal.classList.add("show");
+      });
+      document.getElementById("mapClose").addEventListener("click", function () {
+        modal.classList.remove("show");
+      });
+      modal.addEventListener("click", function (e) {
+        if (e.target === modal) modal.classList.remove("show");
+      });
+      [].forEach.call(document.querySelectorAll(".map-card"), function (c) {
+        c.addEventListener("click", function () {
+          localStorage.setItem("kd_map", c.dataset.map);
+          window.location.href = "Home.html";
+        });
+      });
+    })();
+  </script>
+  <script src="../js/music.js"></script>
+</body>
+</html>
