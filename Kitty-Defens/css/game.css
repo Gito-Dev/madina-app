@@ -204,9 +204,10 @@ html, body {
   filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .35));
 }
 .defender { width: 12%; height: 28%; }
-.defender.def-kitty { width: 15.5%; height: 35%; } /* Kitty Mage stands bigger */
+.defender.def-kitty { width: 13%; height: 30%; }   /* Kitty Mage just a touch bigger */
+.defender.def-canon { width: 14.5%; height: 33%; } /* Cannon is bulkier */
 .defender.removable { pointer-events: auto; }
-.enemy { width: 8%; height: 20%; }
+.enemy { width: 6.5%; height: 17%; }
 .enemy.boss { width: 13%; height: 30%; }
 .enemy img { transform: scaleX(-1); } /* face left toward castle */
 
@@ -248,11 +249,12 @@ html, body {
 }
 
 .projectile {
-  width: 5%;
-  height: 12.5%;
+  width: 9.5%;
+  height: 24%;
   z-index: 13;
 }
-.projectile.ball { width: 7%; height: 16%; }
+.projectile.ball { width: 4%; height: 9%; }            /* cannon ball way smaller */
+.projectile.proj-kitty { width: 4.5%; height: 11%; }   /* mage's spell smaller */
 
 /* health bars */
 .hpbar {
@@ -279,8 +281,8 @@ html, body {
 /* floating collectible star */
 .star {
   position: absolute;
-  width: 46px;
-  height: 46px;
+  width: 60px;
+  height: 60px;
   transform: translate(-50%, -50%);
   z-index: 20;
   cursor: pointer;

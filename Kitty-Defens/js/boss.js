@@ -14,6 +14,16 @@
   const B = A + "Boss-ryuk/";
   const SPEED = 1.5;
 
+  // ---------- Sound effects ----------
+  // small pool so rapid hits can overlap without cutting each other off
+  const hitPool = [];
+  for (let i = 0; i < 5; i++) { const a = new Audio(A + "audio/hit.mp3"); a.volume = 0.3; hitPool.push(a); }
+  let hitIdx = 0;
+  function playHit() {
+    const a = hitPool[(hitIdx = (hitIdx + 1) % hitPool.length)];
+    try { a.currentTime = 0; a.play().catch(() => {}); } catch (e) {}
+  }
+
   // ---------- Defenders (same roster as the main game) ----------
   const DEFENDERS = {
     sunflower: {
@@ -49,7 +59,7 @@
 
   // ---------- The Mega Boss ----------
   const MEGA = {
-    name: "Ryuk — God of Death", hp: 5000, speed: 0.008, dps: 170, reward: 800, score: 1500,
+    name: "Ryuk — God of Death", hp: 15000, speed: 0.008, dps: 170, reward: 800, score: 1500,
     img: B + "mega-boss.gif", boss: true, mega: true,
     shootInterval: 2600, shootDamage: 58, projSpeed: 0.5, proj: B + "boss-shoot.gif",
     summonInterval: 6500, laneSwapMs: 3600, death: B + "mega-boss-death-effect.gif",
@@ -426,7 +436,7 @@
   // ---------- Defender projectiles ----------
   function fireProjectile(def) {
     const el = document.createElement("div");
-    el.className = "entity projectile" + (def.cfg.arc ? " ball" : "");
+    el.className = "entity projectile proj-" + def.key + (def.cfg.arc ? " ball" : "");
     const baseTop = rowToTop(def.row) - 2;
     el.style.left = xToLeft(def.x + 0.03) + "%";
     el.style.top = baseTop + "%";
@@ -486,6 +496,7 @@
   }
 
   function damageEnemy(en, dmg) {
+    playHit();
     en.hp -= dmg;
     en.bar.style.width = Math.max(0, (en.hp / en.maxHp) * 100) + "%";
     en.el.firstElementChild.classList.add("hit-flash");

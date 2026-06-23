@@ -14,6 +14,16 @@
   // ---------- Config ----------
   const SPEED = 1.5; // global game pace multiplier
 
+  // ---------- Sound effects ----------
+  // small pool so rapid hits can overlap without cutting each other off
+  const hitPool = [];
+  for (let i = 0; i < 5; i++) { const a = new Audio(A + "audio/hit.mp3"); a.volume = 0.3; hitPool.push(a); }
+  let hitIdx = 0;
+  function playHit() {
+    const a = hitPool[(hitIdx = (hitIdx + 1) % hitPool.length)];
+    try { a.currentTime = 0; a.play().catch(() => {}); } catch (e) {}
+  }
+
   const DEFENDERS = {
     sunflower: {
       name: "Rose Bud", cost: 50, hp: 200, img: A + "characters/sunflower.gif",
@@ -475,7 +485,7 @@
   // ---------- Projectiles ----------
   function fireProjectile(def) {
     const el = document.createElement("div");
-    el.className = "entity projectile" + (def.cfg.arc ? " ball" : "");
+    el.className = "entity projectile proj-" + def.key + (def.cfg.arc ? " ball" : "");
     const baseTop = rowToTop(def.row) - 2;
     el.style.left = xToLeft(def.x + 0.03) + "%";
     el.style.top = baseTop + "%";
@@ -521,6 +531,7 @@
   }
 
   function damageEnemy(en, dmg) {
+    playHit();
     en.hp -= dmg;
     en.bar.style.width = Math.max(0, (en.hp / en.maxHp) * 100) + "%";
     en.el.firstElementChild.classList.add("hit-flash");
