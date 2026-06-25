@@ -46,11 +46,25 @@
       </div>
     </div>
 
-    <!-- Active perk (speed boot) shown under the health bar -->
+    <!-- Active perks shown under the health bar -->
     <div class="perks">
       <div class="perk-chip" id="speedPerk">
-        <img src="../Assets/effects/speed-up.png" alt="" />
+        <img src="../Assets/buffs/speed-up.png" alt="" />
         <span id="speedTime">0s</span>
+      </div>
+      <div class="perk-chip armor-chip" id="armorPerk">
+        <img src="../Assets/buffs/armor.png" alt="" />
+        <span id="armorVal">0</span>
+      </div>
+    </div>
+
+    <!-- Chest open panel (shown when standing on a chest) -->
+    <div class="chest-panel" id="chestPanel">
+      <div class="chest-title">OPEN CHEST</div>
+      <div class="chest-opts">
+        <button class="copt" id="payGold">5 Gold</button>
+        <button class="copt" id="payEmerald">3 Emerald</button>
+        <button class="copt" id="payRuby">1 Ruby</button>
       </div>
     </div>
 
@@ -59,6 +73,12 @@
 
     <!-- Center wave banner -->
     <div class="banner" id="banner"></div>
+
+    <!-- Round announcement (uses the ROUND graphic) -->
+    <div class="round-banner" id="roundBanner">
+      <img src="../Assets/effects/round-word.png" alt="ROUND" />
+      <span id="roundNum">1</span>
+    </div>
 
     <!-- LEFT joystick: move -->
     <div class="joystick move" id="joystick">
@@ -87,6 +107,29 @@
     <!-- Inventory (bottom center): pick items, select a slot, press USE -->
     <button class="use-btn" id="useBtn">USE</button>
     <div class="inv" id="inv"></div>
+
+    <!-- How-to-play / preparation intro (gates round 1) -->
+    <div class="intro-overlay show" id="introOverlay">
+      <div class="intro-card">
+        <h1>HOW TO PLAY</h1>
+        <div class="intro-rows">
+          <div class="irow"><span class="ikey">Move</span> Left stick / arrow keys &mdash; roam the map</div>
+          <div class="irow"><span class="ikey">Shoot</span> Right stick &mdash; aim &amp; auto-fire pink balls</div>
+          <div class="irow"><img src="../Assets/buffs/health.png" alt="" /> <b>Health</b> &mdash; restores +50 HP</div>
+          <div class="irow"><img src="../Assets/buffs/speed-up.png" alt="" /> <b>Speed Boot</b> &mdash; run faster for 60s</div>
+          <div class="irow"><img src="../Assets/buffs/nuke.png" alt="" /> <b>Nuke</b> &mdash; kills every zombie on screen</div>
+          <div class="irow"><img src="../Assets/buffs/armor.png" alt="" /> <b>Armor</b> &mdash; shield that soaks damage (chest only)</div>
+          <div class="irow">
+            <img src="../Assets/buffs/gold.png" alt="" /><img src="../Assets/buffs/emrald.png" alt="" /><img src="../Assets/buffs/ruby.png" alt="" />
+            <b>Gems</b> &mdash; drop from zombies, kept in your inventory
+          </div>
+          <div class="irow"><img src="../Assets/buffs/chest.png" alt="" /> <b>Chest</b> &mdash; open with 5 gold, 3 emerald or 1 ruby for buffs</div>
+          <div class="irow"><span class="ikey">Bag</span> Tap an inventory slot, then <b>USE</b> to activate a buff</div>
+          <div class="irow"><span class="ikey">Portal</span> Step on the green dungeon &amp; press ENTER for the Biohazard zone</div>
+        </div>
+        <button class="start-game" id="startBtn">&#9654; START ROUND 1</button>
+      </div>
+    </div>
 
     <!-- Game over overlay -->
     <div class="overlay" id="overlay">

@@ -31,7 +31,7 @@
   const Z_ATTACK_MS    = 700;     // ms between contact hits
   const Z_CONTACT_DIST = 58;      // world px to be "touching" the kitty
   const Z_HIT_RADIUS   = 56;      // bullet collision radius
-  const MAX_ALIVE      = 24;
+  const MAX_ALIVE      = 32;
   const SPAWN_INTERVAL = 850;     // ms between spawns within a wave
   const NEXT_WAVE_MS   = 2600;    // pause between waves
 
@@ -43,8 +43,22 @@
   const SPEED_DUR_MS   = 60000;   // boot lasts 1 minute
   const ENTER_RADIUS   = 170;     // how close to the dungeon to show ENTER
 
-  const ITEM_IMG = { health: "health.png", speed: "speed-up.png", nuke: "nuke.png" };
-  for (const t in ITEM_IMG) new Image().src = `../Assets/effects/${ITEM_IMG[t]}`;
+  /* ---------------- Currency / chests ---------------- */
+  const COIN_CHANCE    = 0.55;    // chance a kill drops a coin
+  const CHEST_RADIUS   = 95;      // how close to open a chest
+  const CHEST_MIN_MS   = 18000;   // base time between chest spawns
+  const CHEST_VAR_MS   = 12000;   // + random up to this
+  const MAX_CHESTS     = 4;       // they persist, so cap how many pile up
+
+  const BUFF_DIR = "../Assets/buffs";
+  const PICKUP_IMG = {
+    health: "health.png", speed: "speed-up.png", nuke: "nuke.png", armor: "armor.png",
+    gold: "gold.png", emerald: "emrald.png", ruby: "ruby.png",
+  };
+  for (const t in PICKUP_IMG) new Image().src = `${BUFF_DIR}/${PICKUP_IMG[t]}`;
+  new Image().src = `${BUFF_DIR}/chest.png`;
+  const CURRENCY = ["gold", "emerald", "ruby"];
+  const COST = { gold: 5, emerald: 3, ruby: 1 };   // any one of these opens a chest
 
   // Three dungeons w/ colored glow. dungeons-2 (green) is the biohazard portal.
   const DUNGEONS = [
@@ -73,6 +87,10 @@
     shootIdx = (shootIdx + 1) % SFX_POOL_SIZE;
     try { a.currentTime = 0; a.play(); } catch (e) { /* autoplay not ready yet */ }
   }
+
+  // Intro music — plays once, started by the START button (see init).
+  const introMusic = new Audio("../Assets/audio/intro-game-audio.wav");
+  introMusic.volume = 0.45;
 
   /* ---------------- Sprites ---------------- */
   const CHAR_DIR = "../Assets/character";          // <dir>-<n>.png  (1 idle, 2..5 walk)
@@ -140,11 +158,22 @@
   const enterBtn  = document.getElementById("enterBtn");
   const invEl     = document.getElementById("inv");
   const useBtn    = document.getElementById("useBtn");
+  const chestPanel= document.getElementById("chestPanel");
+  const payGold   = document.getElementById("payGold");
+  const payEmerald= document.getElementById("payEmerald");
+  const payRuby   = document.getElementById("payRuby");
+  const armorPerk = document.getElementById("armorPerk");
+  const armorVal  = document.getElementById("armorVal");
+  const introOverlay = document.getElementById("introOverlay");
+  const startBtn  = document.getElementById("startBtn");
+  const roundBanner = document.getElementById("roundBanner");
+  const roundNum  = document.getElementById("roundNum");
 
   /* ---------------- Game state ---------------- */
   let player_state, zombies, bullets, shells, pickups, wave, spawnRemaining, spawnTimer,
       nextWaveTimer, waveActive, kills, fireTimer, facing, lastDir, running,
-      speedTimer, inBiohazard, portal, lastDrop, slots, selectedSlot;
+      speedTimer, inBiohazard, portal, lastDrop, slots, selectedSlot,
+      chests, chestTimer, activeChest, armorPoints;
 
   /* ---------------- Inventory ---------------- */
   const INV_SLOTS = 10;       // bottom-center slots
@@ -170,7 +199,7 @@
       const cnt = el.querySelector(".cnt");
       if (s) {
         el.classList.add("filled");
-        ico.style.backgroundImage = `url("../Assets/effects/${ITEM_IMG[s.type]}")`;
+        ico.style.backgroundImage = `url("${BUFF_DIR}/${PICKUP_IMG[s.type]}")`;
         cnt.textContent = "x" + s.count;
         cnt.style.display = "";
       } else {
@@ -204,6 +233,7 @@
     if (selectedSlot < 0) return;
     const s = slots[selectedSlot];
     if (!s) { selectedSlot = -1; renderInventory(); return; }
+    if (CURRENCY.includes(s.type)) { showBanner("Gems open chests"); return; }
     applyItem(s.type, player_state.x, player_state.y - 40);
     s.count--;
     if (s.count <= 0) { slots[selectedSlot] = null; selectedSlot = -1; }
@@ -236,6 +266,13 @@
     walkIndex = 0;
     walkTimer = 0;
     // reset inventory + perks + back to the overworld map
+    if (chests) chests.forEach((c) => c.el.remove());
+    chests = [];
+    activeChest = null;
+    chestPanel.classList.remove("show");
+    chestTimer = CHEST_MIN_MS;
+    armorPoints = 0;
+    armorPerk.style.display = "none";
     slots = new Array(INV_SLOTS).fill(null);
     selectedSlot = -1;
     renderInventory();
@@ -392,12 +429,19 @@
   /* ---------------- Zombie spawning ---------------- */
   function startWave(n) {
     wave = n;
-    spawnRemaining = 3 + n * 2;          // wave 1 = 5, wave 2 = 7, ...
+    spawnRemaining = 4 + n * 3;          // zombies multiply more each round
     spawnTimer = 0;
     waveActive = true;
     waveNum.textContent = n;
-    showBanner(`WAVE ${n}`);
+    showRound(n);
     updateHUD();
+  }
+  // ROUND graphic + number announcement
+  function showRound(n) {
+    roundNum.textContent = n;
+    roundBanner.classList.remove("show");
+    void roundBanner.offsetWidth;
+    roundBanner.classList.add("show");
   }
 
   function spawnZombie() {
@@ -487,7 +531,7 @@
     el.className = `pickup item-${type}`;
     const inner = document.createElement("div");
     inner.className = "pickup-inner";
-    inner.style.backgroundImage = `url("../Assets/effects/${ITEM_IMG[type]}")`;
+    inner.style.backgroundImage = `url("${BUFF_DIR}/${PICKUP_IMG[type]}")`;
     el.appendChild(inner);
     el.style.transform = `translate(${x}px, ${y}px)`;
     world.appendChild(el);
@@ -518,6 +562,10 @@
       speedPerk.style.display = "flex";
       speedTime.textContent = "60s";
       showBanner("SPEED UP!");
+    } else if (type === "armor") {
+      armorPoints = 100;            // full armor
+      updateArmorHUD();
+      showBanner("ARMOR UP!");
     } else if (type === "nuke") {
       nukeAll();
     }
@@ -572,6 +620,9 @@
     bullets.forEach((b) => b.el.remove()); bullets = [];
     shells.forEach((s) => s.el.remove()); shells = [];
     pickups.forEach((p) => p.el.remove()); pickups = [];
+    chests.forEach((c) => c.el.remove()); chests = [];
+    activeChest = null; chestPanel.classList.remove("show");
+    chestTimer = CHEST_MIN_MS;
     player_state.x = WORLD_W / 2;
     player_state.y = WORLD_H / 2;
     waveActive = false;
@@ -580,6 +631,67 @@
     showBanner("BIOHAZARD ZONE");
   }
   enterBtn.addEventListener("click", () => { if (!inBiohazard) enterBiohazard(); });
+
+  /* ---------------- Currency + chests ---------------- */
+  // Gems live in the inventory; these read/spend the stacks.
+  function invSlotOf(type) { return slots.find((s) => s && s.type === type); }
+  function invCount(type) { const s = invSlotOf(type); return s ? s.count : 0; }
+  function spendInv(type, amount) {
+    const s = invSlotOf(type);
+    if (!s || s.count < amount) return false;
+    s.count -= amount;
+    if (s.count <= 0) {
+      const i = slots.indexOf(s);
+      slots[i] = null;
+      if (selectedSlot === i) selectedSlot = -1;
+    }
+    renderInventory();
+    return true;
+  }
+  function updateArmorHUD() {
+    if (armorPoints > 0) {
+      armorPerk.style.display = "flex";
+      armorVal.textContent = armorPoints;
+    } else {
+      armorPerk.style.display = "none";
+    }
+  }
+
+  function maybeDropCurrency(x, y) {
+    if (Math.random() > COIN_CHANCE) return;
+    // zombies drop only gold / emerald — rubies come from chests
+    const type = Math.random() < 0.78 ? "gold" : "emerald";
+    spawnPickup(x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 40, type);
+  }
+
+  function spawnChest() {
+    if (chests.length >= MAX_CHESTS) return;
+    const x = 320 + Math.random() * (WORLD_W - 640);
+    const y = 280 + Math.random() * (WORLD_H - 560);
+    const el = document.createElement("div");
+    el.className = "chest";
+    el.innerHTML = '<div class="chest-inner"></div>';
+    el.style.transform = `translate(${x}px, ${y}px)`;
+    world.appendChild(el);
+    chests.push({ x, y, el });
+    showBanner("A CHEST APPEARED!");
+  }
+
+  function openChest(payType) {
+    if (!activeChest || !spendInv(payType, COST[payType])) return;
+    activeChest.el.remove();
+    chests.splice(chests.indexOf(activeChest), 1);
+    activeChest = null;
+    chestPanel.classList.remove("show");
+    // reward: a couple of random buffs straight into the inventory.
+    // armor and rubies are exclusive to chests.
+    const pool = ["health", "speed", "nuke", "armor", "armor", "ruby"];
+    for (let k = 0; k < 2; k++) addItem(pool[Math.floor(Math.random() * pool.length)]);
+    showBanner("CHEST OPENED!");
+  }
+  payGold.addEventListener("click", () => openChest("gold"));
+  payEmerald.addEventListener("click", () => openChest("emerald"));
+  payRuby.addEventListener("click", () => openChest("ruby"));
   let bannerTimer = null;
   function showBanner(text) {
     banner.textContent = text;
@@ -666,7 +778,7 @@
             const ze = z.el;
             setTimeout(() => ze.classList.remove("hurt"), 80);
             dead = true;
-            if (z.hp <= 0) { maybeDrop(z.x, z.y); killZombie(z, j); }
+            if (z.hp <= 0) { maybeDrop(z.x, z.y); maybeDropCurrency(z.x, z.y); killZombie(z, j); }
             break;
           }
         }
@@ -712,10 +824,19 @@
         else zSetSprite(z, z.facing, 1);
         if (z.attackTimer >= Z_ATTACK_MS) {
           z.attackTimer = 0;
-          player_state.hp -= Z_CONTACT_DMG;
-          spawnDmg(player_state.x, player_state.y - 54, Z_CONTACT_DMG, true);
-          updateHUD();
-          if (player_state.hp <= 0) { gameOver(); break; }
+          let dmg = Z_CONTACT_DMG;
+          if (armorPoints > 0) {           // armor soaks damage first
+            const absorbed = Math.min(armorPoints, dmg);
+            armorPoints -= absorbed;
+            dmg -= absorbed;
+            updateArmorHUD();
+          }
+          if (dmg > 0) {
+            player_state.hp -= dmg;
+            spawnDmg(player_state.x, player_state.y - 54, dmg, true);
+            updateHUD();
+            if (player_state.hp <= 0) { gameOver(); break; }
+          }
         }
       }
       z.el.style.transform = `translate(${z.x}px, ${z.y}px)`;
@@ -728,15 +849,36 @@
       else speedTime.textContent = `${Math.ceil(speedTimer / 1000)}s`;
     }
 
-    /* --- pickups: walk over to store in the inventory (max 5 each) --- */
+    /* --- pickups: gems + buffs both go into the inventory (max 5 each) --- */
     for (let i = pickups.length - 1; i >= 0; i--) {
       const p = pickups[i];
       if (Math.hypot(player_state.x - p.x, player_state.y - p.y) < PICKUP_RADIUS) {
-        if (addItem(p.type)) {       // leave it on the ground if that stack is full
+        if (addItem(p.type)) {   // leave on the ground if that stack is full
           p.el.remove();
           pickups.splice(i, 1);
         }
       }
+    }
+
+    /* --- chest spawning + open prompt --- */
+    if (!inBiohazard) {
+      chestTimer -= dt;
+      if (chestTimer <= 0) {
+        spawnChest();
+        chestTimer = CHEST_MIN_MS + Math.random() * CHEST_VAR_MS;
+      }
+    }
+    activeChest = null;
+    for (const c of chests) {
+      if (Math.hypot(player_state.x - c.x, player_state.y - c.y) < CHEST_RADIUS) { activeChest = c; break; }
+    }
+    if (activeChest) {
+      chestPanel.classList.add("show");
+      payGold.disabled    = invCount("gold")    < COST.gold;
+      payEmerald.disabled = invCount("emerald") < COST.emerald;
+      payRuby.disabled    = invCount("ruby")    < COST.ruby;
+    } else {
+      chestPanel.classList.remove("show");
     }
 
     /* --- biohazard portal: show ENTER when near the green dungeon --- */
@@ -780,5 +922,11 @@
   buildInventory();   // 10 empty slots (once)
   placeDungeons();    // overworld decor + the green biohazard portal (once)
   freshState();
+  running = false;    // hold on the how-to-play screen until START
+  startBtn.addEventListener("click", () => {
+    introOverlay.classList.remove("show");
+    running = true;
+    introMusic.play().catch(() => {});   // play once, on START
+  });
   requestAnimationFrame(tick);
 })();
