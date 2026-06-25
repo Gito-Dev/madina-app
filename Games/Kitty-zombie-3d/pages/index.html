@@ -27,8 +27,11 @@
     <!-- Top bar: health + wave + score -->
     <div class="topbar">
       <div class="hp">
-        <span class="heart">&#10084;</span>
-        <div class="hp-track"><div class="hp-fill" id="hpFill"></div></div>
+        <span class="hp-label">HP</span>
+        <div class="hp-track">
+          <div class="hp-fill" id="hpFill"></div>
+          <span class="hp-text" id="hpText">100</span>
+        </div>
       </div>
 
       <div class="wave-info">
@@ -37,32 +40,52 @@
       </div>
 
       <div class="score-info">
-        <span class="skull">&#128128;</span>
+        <span class="kills-label">KILLS</span>
         <span id="kills">0</span>
-        <a class="menu-link" href="../../Home.html">Menu</a>
+        <a class="menu-link" href="start.html">Home</a>
       </div>
     </div>
+
+    <!-- Active perk (speed boot) shown under the health bar -->
+    <div class="perks">
+      <div class="perk-chip" id="speedPerk">
+        <img src="../Assets/effects/speed-up.png" alt="" />
+        <span id="speedTime">0s</span>
+      </div>
+    </div>
+
+    <!-- Nuke flash -->
+    <div class="nuke-flash" id="nukeFlash"></div>
 
     <!-- Center wave banner -->
     <div class="banner" id="banner"></div>
 
     <!-- LEFT joystick: move -->
     <div class="joystick move" id="joystick">
-      <div class="knob" id="knob"></div>
+      <div class="knob" id="knob">
+        <svg class="move-ico" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M9.5 16V14.5H15.5V16M13.5 10.5V14.5M11.5 10.5V14.5M15.5 7.5C15.5 9.15685 14.1569 10.5 12.5 10.5C10.8431 10.5 9.5 9.15685 9.5 7.5C9.5 5.84315 10.8431 4.5 12.5 4.5C14.1569 4.5 15.5 5.84315 15.5 7.5ZM18.5 19.5H6.5C5.94772 19.5 5.5 19.0523 5.5 18.5V17.5C5.5 16.9477 5.94772 16.5 6.5 16.5H18.5C19.0523 16.5 19.5 16.9477 19.5 17.5V18.5C19.5 19.0523 19.0523 19.5 18.5 19.5Z" stroke="#fff" stroke-width="1.4"/>
+        </svg>
+      </div>
     </div>
 
-    <!-- RIGHT joystick: aim + auto-fire pink balls -->
+    <!-- RIGHT joystick: aim + auto-fire pink balls (the shoot stick) -->
     <div class="joystick aim" id="aimStick">
-      <div class="knob pink" id="aimKnob"></div>
+      <div class="knob pink gun" id="aimKnob">
+        <svg class="gun-ico" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <g>
+            <path d="M509.915,2.067C498.446-9.417,371.29,29.161,331.086,60.974L451.04,180.927C482.853,140.708,521.415,13.567,509.915,2.067z"/>
+            <path d="M268.743,122.677l-41.344,10.328L42.211,318.208l12.047,12.063l-16.359,16.344l-12.063-12.047L0.008,360.396l151.594,151.608l25.844-25.844l-12.063-12.063l16.359-16.359l12.063,12.047l185.188-185.171l10.344-41.359c0,0,18.703-18.719,48.25-48.234L316.993,74.442C287.461,103.942,268.743,122.677,268.743,122.677z"/>
+          </g>
+        </svg>
+      </div>
     </div>
 
-    <!-- Shoot button (fires in the way you're facing) -->
-    <button class="shoot-btn" id="shootBtn">
-      <span class="ball"></span>
-    </button>
+    <!-- Dungeon portal button (shown when near the green dungeon) -->
+    <button class="enter-btn" id="enterBtn">ENTER &#9762;</button>
 
     <p class="hint">
-      Left stick = walk &bull; Right stick = aim &amp; shoot &bull; Button = fire
+      Left stick = walk &bull; Right stick = aim &amp; shoot
     </p>
 
     <!-- Game over overlay -->
@@ -71,7 +94,7 @@
         <h1 id="overTitle">Game Over</h1>
         <p id="overSub"></p>
         <button class="play-again" id="restartBtn">&#9654; Play Again</button>
-        <a class="menu-link2" href="../../Home.html">Back to Menu</a>
+        <a class="menu-link2" href="start.html">Back to Title</a>
       </div>
     </div>
 

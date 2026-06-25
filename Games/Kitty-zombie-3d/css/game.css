@@ -73,18 +73,15 @@ html, body {
   filter: drop-shadow(0 8px 5px rgba(0, 0, 0, 0.4));
 }
 .zombie.hurt .z-sprite { filter: drop-shadow(0 8px 5px rgba(0,0,0,.4)) brightness(2) saturate(0.4); }
-.zombie.dying { animation: zpop 0.28s ease forwards; }
-@keyframes zpop {
-  to { transform: translate(var(--zx), var(--zy)) scale(0.2) rotate(20deg); opacity: 0; }
-}
+.zombie.fade-out { transition: opacity 0.28s ease; opacity: 0; }
 .zombie .z-hp {
   position: absolute;
-  top: 6px;
-  left: 18%;
-  width: 64%;
-  height: 7px;
+  top: 10px;
+  left: 31%;
+  width: 38%;
+  height: 4px;
   background: rgba(0, 0, 0, 0.55);
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
 }
 .zombie .z-hp-fill {
@@ -94,18 +91,151 @@ html, body {
   transition: width 0.1s linear;
 }
 
-/* ---------- Pink ball projectile ---------- */
+/* ---------- Dungeons (map decor with colored glow) ---------- */
+.dungeon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 240px;
+  margin-left: -120px;
+  margin-top: -120px;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: contain;
+  z-index: 1;
+  pointer-events: none;
+  animation: glowPulse 1.9s ease-in-out infinite;
+}
+.dungeon.glow-red   { --gc: #ff3b3b; }
+.dungeon.glow-green { --gc: #46ff7a; }
+.dungeon.glow-blue  { --gc: #49b6ff; }
+@keyframes glowPulse {
+  0%, 100% { filter: drop-shadow(0 0 6px var(--gc)); }
+  50%      { filter: drop-shadow(0 0 16px var(--gc)) drop-shadow(0 0 28px var(--gc)); }
+}
+
+/* ---------- Item pickups on the map ---------- */
+.pickup {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 48px;
+  height: 48px;
+  margin-left: -24px;
+  margin-top: -24px;
+  z-index: 5;
+  pointer-events: none;
+}
+.pickup-inner {
+  width: 100%;
+  height: 100%;
+  background: center / contain no-repeat;
+  animation: bob 1s ease-in-out infinite;
+}
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+.item-health .pickup-inner { filter: drop-shadow(0 0 9px #ff5a8a); }
+.item-speed  .pickup-inner { filter: drop-shadow(0 0 9px #ffd34d); }
+.item-nuke   .pickup-inner { filter: drop-shadow(0 0 9px #8aff5a); }
+
+/* ---------- Active perk chip (under health) ---------- */
+.perks {
+  position: fixed;
+  top: 70px;
+  left: 16px;
+  z-index: 20;
+}
+.perk-chip {
+  display: none;            /* shown by JS when active */
+  align-items: center;
+  gap: 7px;
+  background: rgba(40, 12, 28, 0.7);
+  border: 2px solid #ffd34d;
+  border-radius: 10px;
+  padding: 5px 10px 5px 6px;
+  box-shadow: 0 0 10px rgba(255, 211, 77, 0.5);
+}
+.perk-chip img { width: 24px; height: 24px; image-rendering: auto; }
+.perk-chip span { font-size: 0.5rem; color: #ffe9a8; text-shadow: 0 1px 2px #000; }
+
+/* ---------- Dungeon ENTER button (next to the move stick) ---------- */
+.enter-btn {
+  position: fixed;
+  left: 44px;
+  bottom: 200px;
+  display: none;
+  z-index: 20;
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.6rem;
+  color: #fff;
+  background: linear-gradient(180deg, #5cff9e, #1fbf68);
+  border: 3px solid #fff;
+  padding: 14px 18px;
+  border-radius: 14px;
+  box-shadow: 0 5px 0 #0e8f48, 0 8px 18px rgba(0, 0, 0, 0.4);
+  text-shadow: 1px 1px 0 #0e8f48;
+  cursor: pointer;
+}
+.enter-btn.show { display: inline-block; animation: enterPulse 0.9s ease-in-out infinite; }
+.enter-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #0e8f48; }
+@keyframes enterPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+
+/* ---------- Nuke flash ---------- */
+.nuke-flash {
+  position: fixed;
+  inset: 0;
+  background: #d6ffc2;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+}
+.nuke-flash.go { animation: nukeF 0.45s ease-out; }
+@keyframes nukeF { 0% { opacity: 0.85; } 100% { opacity: 0; } }
+
+/* ---------- Pink bullet projectile ---------- */
 .projectile {
   position: absolute;
-  width: 24px;
-  height: 24px;
-  margin-left: -12px;
-  margin-top: -12px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 38% 32%, #fff, var(--pink) 55%, var(--pink-deep));
-  box-shadow: 0 0 12px 3px rgba(255, 126, 179, 0.85);
+  width: 46px;
+  height: 46px;
+  margin-left: -23px;
+  margin-top: -23px;
+  background: url("../Assets/effects/bullet.png") no-repeat center / contain;
+  filter: drop-shadow(0 0 6px rgba(255, 126, 179, 0.9));
   pointer-events: none;
   z-index: 6;
+}
+
+/* ---------- Floating damage numbers ---------- */
+.dmg-num {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.7rem;
+  color: #fff;
+  text-shadow: 0 0 4px var(--pink-deep), 2px 2px 0 #b81d57;
+  pointer-events: none;
+  z-index: 7;
+  animation: dmgFloat 0.7s ease-out forwards;
+}
+.dmg-num.player { color: #ff5a6e; text-shadow: 0 0 4px #6e0010, 2px 2px 0 #4a000b; }
+.dmg-num.heal { color: #9bff7c; text-shadow: 0 0 4px #1c6e00, 2px 2px 0 #0f4a00; }
+@keyframes dmgFloat {
+  0%   { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(0.8); }
+  20%  { opacity: 1; transform: translate(var(--dx), calc(var(--dy) - 14px)) scale(1.15); }
+  100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) - 48px)) scale(1); }
+}
+
+/* ---------- Ejected shell casing ---------- */
+.shell {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  margin-left: -13px;
+  margin-top: -13px;
+  background: url("../Assets/effects/shell.png") no-repeat center / contain;
+  pointer-events: none;
+  z-index: 3;
 }
 
 /* ---------- Top bar ---------- */
@@ -124,8 +254,9 @@ html, body {
   z-index: 20;
 }
 .hp { display: flex; align-items: center; gap: 8px; }
-.hp .heart { color: #ff4d6d; font-size: 1.1rem; filter: drop-shadow(0 1px 2px #000); }
+.hp-label { color: #fff; font-size: 0.5rem; text-shadow: 0 1px 2px #000; }
 .hp-track {
+  position: relative;
   width: 200px;
   max-width: 38vw;
   height: 18px;
@@ -140,6 +271,18 @@ html, body {
   background: linear-gradient(90deg, #ff4d6d, #ff8fa3);
   transition: width 0.2s ease;
 }
+.hp-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.42rem;
+  color: #fff;
+  text-shadow: 0 1px 2px #000, 0 0 2px #000;
+  z-index: 2;
+}
+.kills-label { color: #fff; font-size: 0.5rem; text-shadow: 0 1px 2px #000; }
 
 .wave-info { text-align: center; color: #fff; text-shadow: 0 2px 4px #000; }
 .wave-label { font-size: 0.62rem; color: #ffd6e8; }
@@ -212,37 +355,18 @@ html, body {
   background: radial-gradient(circle at 40% 35%, #ffd6e8, #ff7eb3 60%, #e23e7a);
   border: 3px solid #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .joystick .knob.pink {
   background: radial-gradient(circle at 40% 35%, #fff, #ff7eb3 55%, #e23e7a);
 }
-
-/* ---------- Shoot button ---------- */
-.shoot-btn {
-  position: fixed;
-  right: 196px;
-  bottom: 52px;
-  width: 92px;
-  height: 92px;
-  border-radius: 50%;
-  border: 4px solid #fff;
-  background: radial-gradient(circle at 42% 35%, #ff9ec7, var(--pink-deep) 70%);
-  box-shadow: 0 6px 0 #b81d57, 0 8px 18px rgba(0, 0, 0, 0.45);
-  z-index: 20;
-  touch-action: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-.shoot-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b81d57, 0 5px 12px rgba(0, 0, 0, 0.45); }
-.shoot-btn .ball {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 38% 32%, #fff, #ffd6e8 60%, #ff7eb3);
-  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.7);
-}
+/* knob icons */
+.move-ico, .gun-ico { width: 34px; height: 34px; pointer-events: none; }
+.move-ico path { stroke: #fff; }
+.gun-ico path { fill: #fff; }
+.gun-ico { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4)); }
 
 .hint {
   position: fixed;

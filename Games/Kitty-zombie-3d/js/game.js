@@ -35,6 +35,28 @@
   const SPAWN_INTERVAL = 850;     // ms between spawns within a wave
   const NEXT_WAVE_MS   = 2600;    // pause between waves
 
+  /* ---------------- Perks / drops ---------------- */
+  const DROP_CHANCE    = 0.16;    // chance a killed zombie drops an item
+  const PICKUP_RADIUS  = 62;      // walk this close to collect
+  const HEAL_AMOUNT    = 50;      // health pickup
+  const SPEED_MULT     = 1.8;     // boot speed multiplier
+  const SPEED_DUR_MS   = 60000;   // boot lasts 1 minute
+  const ENTER_RADIUS   = 170;     // how close to the dungeon to show ENTER
+
+  const ITEM_IMG = { health: "health.png", speed: "speed-up.png", nuke: "nuke.png" };
+  for (const t in ITEM_IMG) new Image().src = `../Assets/effects/${ITEM_IMG[t]}`;
+
+  // Three dungeons w/ colored glow. dungeons-2 (green) is the biohazard portal.
+  const DUNGEONS = [
+    { img: "dungeons-1.png", glow: "red",   portal: false },
+    { img: "dungeons-2.png", glow: "green", portal: true  },
+    { img: "dungeons-3.png", glow: "blue",  portal: false },
+  ];
+  for (const d of DUNGEONS) new Image().src = `../Assets/map/${d.img}`;
+  const MAP_OVER = `url("../Assets/map/3d-map.webp")`;
+  const MAP_BIO  = `url("../Assets/map/biohazard-map.webp")`;
+  new Image().src = "../Assets/map/biohazard-map.webp";
+
   /* ---------------- Sprites ---------------- */
   const CHAR_DIR = "../Assets/character";          // <dir>-<n>.png  (1 idle, 2..5 walk)
   const Z_DIR    = "../Assets/basic-zombie";       // <dir>-<n>.png
@@ -59,6 +81,24 @@
       zombieSprites[dir][n] = `url("${url}")`;
     }
   }
+  const Z_DYING_FRAMES = 5;
+  const Z_DEATH_FRAME_MS = 110;        // per dying frame
+  const zombieDying = [];              // dying-1 .. dying-5
+  for (let n = 1; n <= Z_DYING_FRAMES; n++) {
+    const url = `${Z_DIR}/dying-${n}.png`;
+    new Image().src = url;
+    zombieDying.push(`url("${url}")`);
+  }
+  // Attack swing frames (left / right / up — no "down" art, falls back to idle)
+  const zombieAttack = {};
+  for (const dir of ["left", "right", "up"]) {
+    zombieAttack[dir] = [];
+    for (let n = 1; n <= 2; n++) {
+      const url = `${Z_DIR}/attack-${dir}-${n}.png`;
+      new Image().src = url;
+      zombieAttack[dir].push(`url("${url}")`);
+    }
+  }
 
   /* ---------------- DOM ---------------- */
   const world    = document.getElementById("world");
@@ -67,8 +107,8 @@
   const aimKnob  = document.getElementById("aimKnob");
   const joyEl    = document.getElementById("joystick");
   const aimEl    = document.getElementById("aimStick");
-  const shootBtn = document.getElementById("shootBtn");
   const hpFill   = document.getElementById("hpFill");
+  const hpText   = document.getElementById("hpText");
   const waveNum  = document.getElementById("waveNum");
   const waveSub  = document.getElementById("waveSub");
   const killsEl  = document.getElementById("kills");
@@ -77,18 +117,27 @@
   const overTitle= document.getElementById("overTitle");
   const overSub  = document.getElementById("overSub");
   const restartBtn = document.getElementById("restartBtn");
+  const speedPerk = document.getElementById("speedPerk");
+  const speedTime = document.getElementById("speedTime");
+  const nukeFlash = document.getElementById("nukeFlash");
+  const enterBtn  = document.getElementById("enterBtn");
 
   /* ---------------- Game state ---------------- */
-  let player_state, zombies, bullets, wave, spawnRemaining, spawnTimer,
-      nextWaveTimer, waveActive, kills, fireTimer, facing, lastDir, running;
+  let player_state, zombies, bullets, shells, pickups, wave, spawnRemaining, spawnTimer,
+      nextWaveTimer, waveActive, kills, fireTimer, facing, lastDir, running,
+      speedTimer, inBiohazard, portal;
 
   function freshState() {
     player_state = { x: WORLD_W / 2, y: WORLD_H / 2, hp: PLAYER_MAX_HP };
     // remove any leftover DOM nodes
     if (zombies) zombies.forEach((z) => z.el.remove());
     if (bullets) bullets.forEach((b) => b.el.remove());
+    if (shells) shells.forEach((s) => s.el.remove());
+    if (pickups) pickups.forEach((p) => p.el.remove());
     zombies = [];
     bullets = [];
+    shells = [];
+    pickups = [];
     wave = 0;
     spawnRemaining = 0;
     spawnTimer = 0;
@@ -102,6 +151,13 @@
     currentBg = "";
     walkIndex = 0;
     walkTimer = 0;
+    // reset perks + back to the overworld map
+    speedTimer = 0;
+    speedPerk.style.display = "none";
+    inBiohazard = false;
+    world.style.backgroundImage = MAP_OVER;
+    document.querySelectorAll(".dungeon").forEach((d) => (d.style.display = ""));
+    enterBtn.classList.remove("show");
     setSprite("down", 1);
     overlay.classList.remove("show");
     updateHUD();
@@ -194,16 +250,8 @@
     held.delete(d); recomputeKeys();
   });
 
-  /* ---------------- Shoot button ---------------- */
-  let shootHeld = false;
+  /* ---------------- Spacebar fire (desktop) ---------------- */
   let spaceHeld = false;
-  const press = (e) => { e.preventDefault(); shootHeld = true; };
-  const release = (e) => { if (e) e.preventDefault(); shootHeld = false; };
-  shootBtn.addEventListener("touchstart", press, { passive: false });
-  shootBtn.addEventListener("touchend", release);
-  shootBtn.addEventListener("touchcancel", release);
-  shootBtn.addEventListener("mousedown", press);
-  window.addEventListener("mouseup", () => (shootHeld = false));
 
   /* ---------------- Firing ---------------- */
   // Muzzle offset from the kitty's centre, per shoot direction, so the
@@ -218,19 +266,38 @@
     const mag = Math.hypot(dx, dy) || 1;
     const nx = dx / mag, ny = dy / mag;
     const m = MUZZLE[dirFromVec(dx, dy)];
+    const sx = player_state.x + m.x;
+    const sy = player_state.y + m.y;
+    const angle = Math.atan2(ny, nx) * 180 / Math.PI;   // bullet art points right
     const el = document.createElement("div");
     el.className = "projectile";
     world.appendChild(el);
     const b = {
-      x: player_state.x + m.x,
-      y: player_state.y + m.y,
-      vx: nx * BULLET_SPEED,
-      vy: ny * BULLET_SPEED,
-      life: BULLET_LIFE_MS,
+      x: sx, y: sy,
+      vx: nx * BULLET_SPEED, vy: ny * BULLET_SPEED,
+      angle, life: BULLET_LIFE_MS, el,
+    };
+    el.style.transform = `translate(${sx}px, ${sy}px) rotate(${angle}deg)`;
+    bullets.push(b);
+    ejectShell(sx, sy, nx, ny);
+  }
+
+  // Spit a shell casing backwards out of the gun with a little arc.
+  function ejectShell(x, y, nx, ny) {
+    const el = document.createElement("div");
+    el.className = "shell";
+    world.appendChild(el);
+    const s = {
+      x, y,
+      vx: -nx * (1.4 + Math.random()) + (Math.random() - 0.5) * 1.6,
+      vy: -2.4 - Math.random() * 1.2,
+      rot: Math.random() * 360,
+      vr: (Math.random() - 0.5) * 40,
+      life: 600,
       el,
     };
-    el.style.transform = `translate(${b.x}px, ${b.y}px)`;
-    bullets.push(b);
+    el.style.transform = `translate(${x}px, ${y}px) rotate(${s.rot}deg)`;
+    shells.push(s);
   }
 
   /* ---------------- Zombie spawning ---------------- */
@@ -246,7 +313,7 @@
 
   function spawnZombie() {
     const angle = Math.random() * Math.PI * 2;
-    const ringR = Math.max(window.innerWidth, window.innerHeight) / 2 + 140;
+    const ringR = 280 + Math.random() * 150;   // spawn close to the kitty
     let x = player_state.x + Math.cos(angle) * ringR;
     let y = player_state.y + Math.sin(angle) * ringR;
     x = Math.max(40, Math.min(WORLD_W - 40, x));
@@ -271,29 +338,135 @@
     zombies.push(z);
   }
 
-  function zSetSprite(z, dir, n) {
-    const bg = zombieSprites[dir][n];
+  function zSetBg(z, bg) {
     if (bg !== z.curBg) { z.sprite.style.backgroundImage = bg; z.curBg = bg; }
   }
+  function zSetSprite(z, dir, n) { zSetBg(z, zombieSprites[dir][n]); }
 
   function killZombie(z, i) {
-    z.el.style.setProperty("--zx", `${z.x}px`);
-    z.el.style.setProperty("--zy", `${z.y}px`);
-    z.el.classList.add("dying");
-    const el = z.el;
-    setTimeout(() => el.remove(), 300);
-    zombies.splice(i, 1);
+    zombies.splice(i, 1);     // out of play: no more chasing / hits / damage
     kills++;
     updateHUD();
+    playDeath(z);
+  }
+
+  // Animate dying-1 .. dying-5 where the zombie fell, then fade out.
+  function playDeath(z) {
+    const el = z.el;
+    el.classList.remove("hurt");
+    const hpbar = el.querySelector(".z-hp");
+    if (hpbar) hpbar.style.display = "none";
+    let f = 0;
+    z.sprite.style.backgroundImage = zombieDying[0];
+    const step = () => {
+      f++;
+      if (f < zombieDying.length) {
+        z.sprite.style.backgroundImage = zombieDying[f];
+        setTimeout(step, Z_DEATH_FRAME_MS);
+      } else {
+        el.classList.add("fade-out");
+        setTimeout(() => el.remove(), 280);
+      }
+    };
+    setTimeout(step, Z_DEATH_FRAME_MS);
   }
 
   /* ---------------- HUD / banner ---------------- */
   function updateHUD() {
-    hpFill.style.width = `${Math.max(0, player_state.hp) / PLAYER_MAX_HP * 100}%`;
+    const hp = Math.max(0, Math.ceil(player_state.hp));
+    hpFill.style.width = `${hp / PLAYER_MAX_HP * 100}%`;
+    hpText.textContent = `${hp} / ${PLAYER_MAX_HP}`;
     killsEl.textContent = kills;
     const remaining = spawnRemaining + zombies.length;
     waveSub.textContent = waveActive ? `Zombies left: ${remaining}` : "Get ready…";
   }
+
+  // Floating combat number at a world position.
+  function spawnDmg(x, y, amount, isPlayer, isHeal) {
+    const el = document.createElement("div");
+    el.className = "dmg-num" + (isHeal ? " heal" : isPlayer ? " player" : "");
+    el.textContent = (isHeal ? "+" : "-") + amount;
+    el.style.setProperty("--dx", `${x}px`);
+    el.style.setProperty("--dy", `${y}px`);
+    world.appendChild(el);
+    setTimeout(() => el.remove(), 720);
+  }
+
+  /* ---------------- Items / perks ---------------- */
+  function spawnPickup(x, y, type) {
+    const el = document.createElement("div");
+    el.className = `pickup item-${type}`;
+    const inner = document.createElement("div");
+    inner.className = "pickup-inner";
+    inner.style.backgroundImage = `url("../Assets/effects/${ITEM_IMG[type]}")`;
+    el.appendChild(inner);
+    el.style.transform = `translate(${x}px, ${y}px)`;
+    world.appendChild(el);
+    pickups.push({ x, y, type, el });
+  }
+
+  function maybeDrop(x, y) {
+    if (Math.random() > DROP_CHANCE) return;
+    const r = Math.random();
+    const type = r < 0.55 ? "health" : r < 0.85 ? "speed" : "nuke";
+    spawnPickup(x, y, type);
+  }
+
+  function applyItem(type, x, y) {
+    if (type === "health") {
+      player_state.hp = Math.min(PLAYER_MAX_HP, player_state.hp + HEAL_AMOUNT);
+      spawnDmg(x, y - 30, HEAL_AMOUNT, false, true);
+      updateHUD();
+    } else if (type === "speed") {
+      speedTimer = SPEED_DUR_MS;
+      speedPerk.style.display = "flex";
+      speedTime.textContent = "60s";
+      showBanner("SPEED UP!");
+    } else if (type === "nuke") {
+      nukeAll();
+    }
+  }
+
+  function nukeAll() {
+    nukeFlash.classList.remove("go");
+    void nukeFlash.offsetWidth;
+    nukeFlash.classList.add("go");
+    showBanner("BOOM!");
+    for (let i = zombies.length - 1; i >= 0; i--) killZombie(zombies[i], i);
+  }
+
+  /* ---------------- Dungeons + biohazard portal ---------------- */
+  function placeDungeons() {
+    for (const d of DUNGEONS) {
+      const el = document.createElement("div");
+      el.className = `dungeon glow-${d.glow}`;
+      el.style.backgroundImage = `url("../Assets/map/${d.img}")`;
+      const x = 260 + Math.random() * (WORLD_W - 520);
+      const y = 240 + Math.random() * (WORLD_H - 480);
+      el.style.transform = `translate(${x}px, ${y}px)`;
+      world.appendChild(el);
+      if (d.portal) portal = { x, y };
+    }
+  }
+
+  function enterBiohazard() {
+    inBiohazard = true;
+    world.style.backgroundImage = MAP_BIO;
+    document.querySelectorAll(".dungeon").forEach((d) => (d.style.display = "none"));
+    enterBtn.classList.remove("show");
+    // clear the overworld fight and drop the kitty into the new map
+    zombies.forEach((z) => z.el.remove()); zombies = [];
+    bullets.forEach((b) => b.el.remove()); bullets = [];
+    shells.forEach((s) => s.el.remove()); shells = [];
+    pickups.forEach((p) => p.el.remove()); pickups = [];
+    player_state.x = WORLD_W / 2;
+    player_state.y = WORLD_H / 2;
+    waveActive = false;
+    spawnRemaining = 0;
+    nextWaveTimer = 1600;
+    showBanner("BIOHAZARD ZONE");
+  }
+  enterBtn.addEventListener("click", () => { if (!inBiohazard) enterBiohazard(); });
   let bannerTimer = null;
   function showBanner(text) {
     banner.textContent = text;
@@ -304,7 +477,6 @@
 
   function gameOver() {
     running = false;
-    shootHeld = false;
     overTitle.textContent = "Game Over";
     overSub.innerHTML = `You reached <b>Wave ${wave}</b><br/>Zombies splatted: <b>${kills}</b>`;
     overlay.classList.add("show");
@@ -327,8 +499,9 @@
     if (moving) {
       const scale = Math.min(mmag, 1) / mmag;
       mvx *= scale; mvy *= scale;
-      player_state.x = Math.max(0, Math.min(WORLD_W, player_state.x + mvx * PLAYER_SPEED));
-      player_state.y = Math.max(0, Math.min(WORLD_H, player_state.y + mvy * PLAYER_SPEED));
+      const sp = PLAYER_SPEED * (speedTimer > 0 ? SPEED_MULT : 1);
+      player_state.x = Math.max(0, Math.min(WORLD_W, player_state.x + mvx * sp));
+      player_state.y = Math.max(0, Math.min(WORLD_H, player_state.y + mvy * sp));
       lastDir = { x: mvx, y: mvy };
     }
 
@@ -357,7 +530,7 @@
 
     /* --- firing --- */
     fireTimer += dt;
-    const wantsFire = aiming || shootHeld || spaceHeld;
+    const wantsFire = aiming || spaceHeld;
     if (wantsFire && fireTimer >= FIRE_INTERVAL) {
       fireTimer = 0;
       if (aiming) fire(aimStick.x, aimStick.y);
@@ -374,18 +547,30 @@
           const z = zombies[j];
           if (Math.hypot(b.x - z.x, b.y - z.y) < Z_HIT_RADIUS) {
             z.hp -= BULLET_DMG;
+            spawnDmg(z.x, z.y - 44, BULLET_DMG, false);
             z.hpfill.style.width = `${Math.max(0, z.hp) / z.maxHp * 100}%`;
             z.el.classList.add("hurt");
             const ze = z.el;
             setTimeout(() => ze.classList.remove("hurt"), 80);
             dead = true;
-            if (z.hp <= 0) killZombie(z, j);
+            if (z.hp <= 0) { maybeDrop(z.x, z.y); killZombie(z, j); }
             break;
           }
         }
       }
       if (dead) { b.el.remove(); bullets.splice(i, 1); }
-      else b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
+      else b.el.style.transform = `translate(${b.x}px, ${b.y}px) rotate(${b.angle}deg)`;
+    }
+
+    /* --- shell casings (gravity + spin + fade) --- */
+    for (let i = shells.length - 1; i >= 0; i--) {
+      const s = shells[i];
+      s.vy += 0.28;                      // gravity
+      s.x += s.vx; s.y += s.vy; s.rot += s.vr;
+      s.life -= dt;
+      if (s.life <= 0) { s.el.remove(); shells.splice(i, 1); continue; }
+      s.el.style.opacity = Math.min(1, s.life / 220);
+      s.el.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rot}deg)`;
     }
 
     /* --- zombies --- */
@@ -405,18 +590,45 @@
           z.frame = (z.frame % Z_FRAMES[z.facing]) + 1;
         }
         zSetSprite(z, z.facing, z.frame);
+        z.attackTimer = 0;            // fresh wind-up when it next reaches the kitty
       } else {
-        // in contact: attack the kitty
-        zSetSprite(z, z.facing, 1);
+        // in contact: swing at the kitty, strike at the end of the swing
         z.attackTimer += dt;
+        const atk = zombieAttack[z.facing];      // no art for "down"
+        if (atk) zSetBg(z, z.attackTimer < Z_ATTACK_MS / 2 ? atk[0] : atk[1]);
+        else zSetSprite(z, z.facing, 1);
         if (z.attackTimer >= Z_ATTACK_MS) {
           z.attackTimer = 0;
           player_state.hp -= Z_CONTACT_DMG;
+          spawnDmg(player_state.x, player_state.y - 54, Z_CONTACT_DMG, true);
           updateHUD();
           if (player_state.hp <= 0) { gameOver(); break; }
         }
       }
       z.el.style.transform = `translate(${z.x}px, ${z.y}px)`;
+    }
+
+    /* --- speed perk countdown --- */
+    if (speedTimer > 0) {
+      speedTimer -= dt;
+      if (speedTimer <= 0) { speedTimer = 0; speedPerk.style.display = "none"; }
+      else speedTime.textContent = `${Math.ceil(speedTimer / 1000)}s`;
+    }
+
+    /* --- pickups (walk over to collect) --- */
+    for (let i = pickups.length - 1; i >= 0; i--) {
+      const p = pickups[i];
+      if (Math.hypot(player_state.x - p.x, player_state.y - p.y) < PICKUP_RADIUS) {
+        applyItem(p.type, p.x, p.y);
+        p.el.remove();
+        pickups.splice(i, 1);
+      }
+    }
+
+    /* --- biohazard portal: show ENTER when near the green dungeon --- */
+    if (!inBiohazard && portal) {
+      const near = Math.hypot(player_state.x - portal.x, player_state.y - portal.y) < ENTER_RADIUS;
+      enterBtn.classList.toggle("show", near);
     }
 
     /* --- wave control --- */
@@ -451,6 +663,7 @@
     world.style.transform = `translate(${camX}px, ${camY}px)`;
   }
 
+  placeDungeons();    // overworld decor + the green biohazard portal (once)
   freshState();
   requestAnimationFrame(tick);
 })();
