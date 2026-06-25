@@ -29,14 +29,14 @@
   const Z_SPEED_CAP    = 3.2;
   const Z_CONTACT_DMG  = 8;       // per hit
   const Z_ATTACK_MS    = 700;     // ms between contact hits
-  const Z_CONTACT_DIST = 86;      // world px to be "touching" the kitty
+  const Z_CONTACT_DIST = 58;      // world px to be "touching" the kitty
   const Z_HIT_RADIUS   = 56;      // bullet collision radius
   const MAX_ALIVE      = 24;
   const SPAWN_INTERVAL = 850;     // ms between spawns within a wave
   const NEXT_WAVE_MS   = 2600;    // pause between waves
 
   /* ---------------- Perks / drops ---------------- */
-  const DROP_CHANCE    = 0.16;    // chance a killed zombie drops an item
+  const DROP_CHANCE    = 0.22;    // chance a killed zombie drops an item
   const PICKUP_RADIUS  = 62;      // walk this close to collect
   const HEAL_AMOUNT    = 50;      // health pickup
   const SPEED_MULT     = 1.8;     // boot speed multiplier
@@ -56,6 +56,23 @@
   const MAP_OVER = `url("../Assets/map/3d-map.webp")`;
   const MAP_BIO  = `url("../Assets/map/biohazard-map.webp")`;
   new Image().src = "../Assets/map/biohazard-map.webp";
+
+  /* ---------------- Audio ---------------- */
+  // Pool of shot sounds so rapid fire overlaps instead of cutting itself off.
+  const SHOOT_SRC = "../Assets/audio/shooting.mp3";
+  const SFX_POOL_SIZE = 6;
+  const shootPool = [];
+  for (let i = 0; i < SFX_POOL_SIZE; i++) {
+    const a = new Audio(SHOOT_SRC);
+    a.volume = 0.15;
+    shootPool.push(a);
+  }
+  let shootIdx = 0;
+  function playShoot() {
+    const a = shootPool[shootIdx];
+    shootIdx = (shootIdx + 1) % SFX_POOL_SIZE;
+    try { a.currentTime = 0; a.play(); } catch (e) { /* autoplay not ready yet */ }
+  }
 
   /* ---------------- Sprites ---------------- */
   const CHAR_DIR = "../Assets/character";          // <dir>-<n>.png  (1 idle, 2..5 walk)
@@ -121,11 +138,78 @@
   const speedTime = document.getElementById("speedTime");
   const nukeFlash = document.getElementById("nukeFlash");
   const enterBtn  = document.getElementById("enterBtn");
+  const invEl     = document.getElementById("inv");
+  const useBtn    = document.getElementById("useBtn");
 
   /* ---------------- Game state ---------------- */
   let player_state, zombies, bullets, shells, pickups, wave, spawnRemaining, spawnTimer,
       nextWaveTimer, waveActive, kills, fireTimer, facing, lastDir, running,
-      speedTimer, inBiohazard, portal;
+      speedTimer, inBiohazard, portal, lastDrop, slots, selectedSlot;
+
+  /* ---------------- Inventory ---------------- */
+  const INV_SLOTS = 10;       // bottom-center slots
+  const MAX_PER_ITEM = 5;     // up to 5 of each item (10 x 5 = 50 total)
+  const slotEls = [];
+  function buildInventory() {
+    invEl.innerHTML = "";
+    slotEls.length = 0;
+    for (let i = 0; i < INV_SLOTS; i++) {
+      const s = document.createElement("div");
+      s.className = "slot";
+      s.innerHTML = '<div class="ico"></div><span class="cnt"></span>';
+      s.addEventListener("click", () => selectSlot(i));
+      invEl.appendChild(s);
+      slotEls.push(s);
+    }
+  }
+  function renderInventory() {
+    for (let i = 0; i < INV_SLOTS; i++) {
+      const el = slotEls[i];
+      const s = slots[i];
+      const ico = el.querySelector(".ico");
+      const cnt = el.querySelector(".cnt");
+      if (s) {
+        el.classList.add("filled");
+        ico.style.backgroundImage = `url("../Assets/effects/${ITEM_IMG[s.type]}")`;
+        cnt.textContent = "x" + s.count;
+        cnt.style.display = "";
+      } else {
+        el.classList.remove("filled");
+        ico.style.backgroundImage = "";
+        cnt.style.display = "none";
+      }
+      el.classList.toggle("selected", i === selectedSlot && !!s);
+    }
+    useBtn.classList.toggle("show", selectedSlot >= 0 && !!slots[selectedSlot]);
+  }
+  // Returns false if there's no room (stack full / no empty slot).
+  function addItem(type) {
+    const stack = slots.find((s) => s && s.type === type);
+    if (stack) {
+      if (stack.count >= MAX_PER_ITEM) return false;
+      stack.count++;
+    } else {
+      const idx = slots.indexOf(null);
+      if (idx === -1) return false;
+      slots[idx] = { type, count: 1 };
+    }
+    renderInventory();
+    return true;
+  }
+  function selectSlot(i) {
+    selectedSlot = (selectedSlot === i || !slots[i]) ? -1 : i;
+    renderInventory();
+  }
+  function useSelected() {
+    if (selectedSlot < 0) return;
+    const s = slots[selectedSlot];
+    if (!s) { selectedSlot = -1; renderInventory(); return; }
+    applyItem(s.type, player_state.x, player_state.y - 40);
+    s.count--;
+    if (s.count <= 0) { slots[selectedSlot] = null; selectedSlot = -1; }
+    renderInventory();
+  }
+  useBtn.addEventListener("click", useSelected);
 
   function freshState() {
     player_state = { x: WORLD_W / 2, y: WORLD_H / 2, hp: PLAYER_MAX_HP };
@@ -151,7 +235,11 @@
     currentBg = "";
     walkIndex = 0;
     walkTimer = 0;
-    // reset perks + back to the overworld map
+    // reset inventory + perks + back to the overworld map
+    slots = new Array(INV_SLOTS).fill(null);
+    selectedSlot = -1;
+    renderInventory();
+    lastDrop = null;
     speedTimer = 0;
     speedPerk.style.display = "none";
     inBiohazard = false;
@@ -280,6 +368,7 @@
     el.style.transform = `translate(${sx}px, ${sy}px) rotate(${angle}deg)`;
     bullets.push(b);
     ejectShell(sx, sy, nx, ny);
+    playShoot();
   }
 
   // Spit a shell casing backwards out of the gun with a little arc.
@@ -405,11 +494,18 @@
     pickups.push({ x, y, type, el });
   }
 
+  const DROP_WEIGHTS = { health: 3, speed: 2, nuke: 2 };
   function maybeDrop(x, y) {
     if (Math.random() > DROP_CHANCE) return;
-    const r = Math.random();
-    const type = r < 0.55 ? "health" : r < 0.85 ? "speed" : "nuke";
-    spawnPickup(x, y, type);
+    // never drop the same item twice in a row (no double-hearts)
+    const types = Object.keys(DROP_WEIGHTS).filter((t) => t !== lastDrop);
+    let total = 0;
+    for (const t of types) total += DROP_WEIGHTS[t];
+    let r = Math.random() * total;
+    let chosen = types[types.length - 1];
+    for (const t of types) { r -= DROP_WEIGHTS[t]; if (r <= 0) { chosen = t; break; } }
+    lastDrop = chosen;
+    spawnPickup(x, y, chosen);
   }
 
   function applyItem(type, x, y) {
@@ -437,16 +533,33 @@
 
   /* ---------------- Dungeons + biohazard portal ---------------- */
   function placeDungeons() {
-    for (const d of DUNGEONS) {
+    // Each dungeon goes in its own quadrant (so two are never on the same
+    // side / clustered) and well clear of the centre where the kitty spawns.
+    const m = 280;              // edge margin
+    const gapX = 420, gapY = 180;   // clearance from the centre
+    const cx = WORLD_W / 2, cy = WORLD_H / 2;
+    const quads = [
+      { x0: m, x1: cx - gapX, y0: m, y1: cy - gapY },                   // top-left
+      { x0: cx + gapX, x1: WORLD_W - m, y0: m, y1: cy - gapY },         // top-right
+      { x0: m, x1: cx - gapX, y0: cy + gapY, y1: WORLD_H - m },         // bottom-left
+      { x0: cx + gapX, x1: WORLD_W - m, y0: cy + gapY, y1: WORLD_H - m },// bottom-right
+    ];
+    // shuffle, then take one quadrant per dungeon
+    for (let i = quads.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [quads[i], quads[j]] = [quads[j], quads[i]];
+    }
+    DUNGEONS.forEach((d, idx) => {
+      const q = quads[idx];
+      const x = q.x0 + Math.random() * (q.x1 - q.x0);
+      const y = q.y0 + Math.random() * (q.y1 - q.y0);
       const el = document.createElement("div");
       el.className = `dungeon glow-${d.glow}`;
       el.style.backgroundImage = `url("../Assets/map/${d.img}")`;
-      const x = 260 + Math.random() * (WORLD_W - 520);
-      const y = 240 + Math.random() * (WORLD_H - 480);
       el.style.transform = `translate(${x}px, ${y}px)`;
       world.appendChild(el);
       if (d.portal) portal = { x, y };
-    }
+    });
   }
 
   function enterBiohazard() {
@@ -615,13 +728,14 @@
       else speedTime.textContent = `${Math.ceil(speedTimer / 1000)}s`;
     }
 
-    /* --- pickups (walk over to collect) --- */
+    /* --- pickups: walk over to store in the inventory (max 5 each) --- */
     for (let i = pickups.length - 1; i >= 0; i--) {
       const p = pickups[i];
       if (Math.hypot(player_state.x - p.x, player_state.y - p.y) < PICKUP_RADIUS) {
-        applyItem(p.type, p.x, p.y);
-        p.el.remove();
-        pickups.splice(i, 1);
+        if (addItem(p.type)) {       // leave it on the ground if that stack is full
+          p.el.remove();
+          pickups.splice(i, 1);
+        }
       }
     }
 
@@ -663,6 +777,7 @@
     world.style.transform = `translate(${camX}px, ${camY}px)`;
   }
 
+  buildInventory();   // 10 empty slots (once)
   placeDungeons();    // overworld decor + the green biohazard portal (once)
   freshState();
   requestAnimationFrame(tick);

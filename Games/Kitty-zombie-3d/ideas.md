@@ -1,0 +1,3 @@
+- add inventory
+- mission
+- new guns
