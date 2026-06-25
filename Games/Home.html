@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Madina &#128149; gito</title>
+    <title>Madina &#128149; Pick a Game</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -21,15 +21,9 @@
         --shadow: 0 8px 24px rgba(226, 62, 122, 0.35);
         --pix: "Press Start 2P", monospace;
       }
-
       * { box-sizing: border-box; margin: 0; padding: 0; }
-
-      html, body {
-        min-height: 100%;
-        font-family: "Trebuchet MS", "Comic Sans MS", system-ui, sans-serif;
-        color: var(--ink);
-      }
-
+      html, body { min-height: 100%; color: var(--ink);
+        font-family: "Trebuchet MS", "Comic Sans MS", system-ui, sans-serif; }
       body {
         background:
           radial-gradient(circle at 20% 15%, #fff 0, transparent 30%),
@@ -38,39 +32,44 @@
         background-attachment: fixed;
       }
 
-      /* ---------- Hero ---------- */
-      .hero {
+      .wrap {
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         text-align: center;
-        padding: 70px 20px 90px;
-        min-height: 100vh;
+        padding: 60px 20px 80px;
       }
-      .hero-title {
+      .title {
         font-family: var(--pix);
-        font-size: clamp(1.4rem, 5vw, 3rem);
+        font-size: clamp(1.2rem, 4.5vw, 2.4rem);
         color: var(--pink-deep);
         line-height: 1.5;
         text-shadow: 2px 2px 0 #fff, 4px 4px 0 rgba(226, 62, 122, 0.25);
       }
-      .hero-sub {
-        margin-top: 22px;
-        font-size: 1.1rem;
+      .sub {
+        margin-top: 18px;
+        font-size: 1.05rem;
         max-width: 520px;
         opacity: 0.85;
         line-height: 1.6;
       }
 
+      .cards {
+        margin-top: 50px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px;
+        justify-content: center;
+      }
       .game-card {
-        margin-top: 48px;
-        display: inline-block;
+        width: 260px;
         text-decoration: none;
         background: rgba(255, 255, 255, 0.85);
         border: 4px solid #fff;
         border-radius: 28px;
-        padding: 34px 40px;
+        padding: 34px 26px;
         box-shadow: var(--shadow);
         backdrop-filter: blur(6px);
         transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -82,38 +81,52 @@
       .game-emoji { font-size: 3.4rem; }
       .game-name {
         font-family: var(--pix);
-        font-size: 1rem;
+        font-size: 0.95rem;
         color: var(--pink-deep);
         margin-top: 16px;
+        line-height: 1.5;
+      }
+      .game-desc {
+        margin-top: 12px;
+        font-size: 0.9rem;
+        opacity: 0.75;
+        line-height: 1.5;
       }
       .game-go {
         display: inline-block;
-        margin-top: 18px;
+        margin-top: 20px;
         font-family: var(--pix);
-        font-size: 0.7rem;
+        font-size: 0.65rem;
         color: #fff;
         background: var(--pink-deep);
-        padding: 12px 20px;
+        padding: 12px 18px;
         border-radius: 14px;
         box-shadow: 0 4px 0 #b81d57;
       }
-
     </style>
   </head>
   <body>
-    <!-- Hero -->
-    <main class="hero" id="home">
-      <h1 class="hero-title">Hey Madina &#128149;</h1>
-      <p class="hero-sub">
-        gito made a little world just for you. Pick a door from the menu above
-        &mdash; the kitties are waiting to play!
-      </p>
+    <main class="wrap">
+      <h1 class="title">Choose your game &#128149;</h1>
+      <p class="sub">Two kitty worlds to play in. Tap a card to start!</p>
 
-      <a class="game-card" href="Games/Home.html">
-        <div class="game-emoji">&#128049;</div>
-        <div class="game-name">PLAY GAMES</div>
-        <span class="game-go">&#9654; PLAY NOW</span>
-      </a>
+      <div class="cards">
+        <!-- Section 1: Kitty Plant (tower defense) -->
+        <a class="game-card" href="Kitty-Plant/pages/index.html">
+          <div class="game-emoji">&#127811;&#128049;</div>
+          <div class="game-name">KITTY PLANT</div>
+          <div class="game-desc">Plant your kitty defenders and stop the waves.</div>
+          <span class="game-go">&#9654; PLAY</span>
+        </a>
+
+        <!-- Section 2: Kitty vs Zombie 3D (new game) -->
+        <a class="game-card" href="Kitty-zombie-3d/pages/index.html">
+          <div class="game-emoji">&#128049;&#129482;</div>
+          <div class="game-name">KITTY VS ZOMBIE</div>
+          <div class="game-desc">Roam the 3D map. Walk anywhere with the joystick.</div>
+          <span class="game-go">&#9654; PLAY</span>
+        </a>
+      </div>
     </main>
   </body>
 </html>

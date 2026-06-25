@@ -1,0 +1,298 @@
+/* ===== Kitty vs Zombie 3D ===== */
+:root {
+  --char-size: 130px;     /* on-screen size of the kitty */
+  --zombie-size: 120px;   /* on-screen size of a zombie  */
+  --joy-size: 150px;      /* outer joystick ring */
+  --joy-knob: 64px;       /* inner joystick knob */
+  --pink: #ff7eb3;
+  --pink-deep: #e23e7a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #1a0e16;
+  font-family: "Press Start 2P", "Trebuchet MS", monospace;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+/* ---------- Camera viewport ---------- */
+.viewport { position: fixed; inset: 0; overflow: hidden; }
+
+/* ---------- World (full map) ---------- */
+.world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2914px;
+  height: 1440px;
+  background: url("../Assets/map/3d-map.webp") no-repeat center / 100% 100%;
+  will-change: transform;
+}
+
+/* ---------- Player ---------- */
+.player {
+  position: absolute;
+  width: var(--char-size);
+  height: var(--char-size);
+  margin-left: calc(var(--char-size) / -2);
+  margin-top: calc(var(--char-size) / -2);
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: contain;
+  filter: drop-shadow(0 10px 6px rgba(0, 0, 0, 0.45));
+  will-change: transform, background-image;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ---------- Zombies ---------- */
+.zombie {
+  position: absolute;
+  width: var(--zombie-size);
+  height: var(--zombie-size);
+  margin-left: calc(var(--zombie-size) / -2);
+  margin-top: calc(var(--zombie-size) / -2);
+  pointer-events: none;
+  will-change: transform;
+  z-index: 4;
+}
+.zombie .z-sprite {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: contain;
+  filter: drop-shadow(0 8px 5px rgba(0, 0, 0, 0.4));
+}
+.zombie.hurt .z-sprite { filter: drop-shadow(0 8px 5px rgba(0,0,0,.4)) brightness(2) saturate(0.4); }
+.zombie.dying { animation: zpop 0.28s ease forwards; }
+@keyframes zpop {
+  to { transform: translate(var(--zx), var(--zy)) scale(0.2) rotate(20deg); opacity: 0; }
+}
+.zombie .z-hp {
+  position: absolute;
+  top: 6px;
+  left: 18%;
+  width: 64%;
+  height: 7px;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.zombie .z-hp-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #7CFC00, #c6f53d);
+  transition: width 0.1s linear;
+}
+
+/* ---------- Pink ball projectile ---------- */
+.projectile {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  margin-left: -12px;
+  margin-top: -12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #fff, var(--pink) 55%, var(--pink-deep));
+  box-shadow: 0 0 12px 3px rgba(255, 126, 179, 0.85);
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* ---------- Top bar ---------- */
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  gap: 12px;
+  background: linear-gradient(180deg, rgba(40, 12, 28, 0.78), rgba(40, 12, 28, 0));
+  z-index: 20;
+}
+.hp { display: flex; align-items: center; gap: 8px; }
+.hp .heart { color: #ff4d6d; font-size: 1.1rem; filter: drop-shadow(0 1px 2px #000); }
+.hp-track {
+  width: 200px;
+  max-width: 38vw;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.hp-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ff4d6d, #ff8fa3);
+  transition: width 0.2s ease;
+}
+
+.wave-info { text-align: center; color: #fff; text-shadow: 0 2px 4px #000; }
+.wave-label { font-size: 0.62rem; color: #ffd6e8; }
+.wave-sub { font-size: 0.45rem; margin-top: 6px; opacity: 0.85; }
+
+.score-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 0.6rem;
+  text-shadow: 0 2px 4px #000;
+}
+.menu-link, .menu-link2 {
+  font-size: 0.5rem;
+  color: #fff;
+  background: rgba(226, 62, 122, 0.9);
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 2px solid #fff;
+  text-decoration: none;
+}
+
+/* ---------- Center banner ---------- */
+.banner {
+  position: fixed;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  font-size: 1.4rem;
+  color: #fff;
+  text-shadow: 0 0 10px var(--pink-deep), 3px 3px 0 #b81d57;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 25;
+  text-align: center;
+}
+.banner.show { animation: bannerPop 1.8s ease forwards; }
+@keyframes bannerPop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  78% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ---------- Joysticks ---------- */
+.joystick {
+  position: fixed;
+  bottom: 28px;
+  width: var(--joy-size);
+  height: var(--joy-size);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.18), rgba(255, 126, 179, 0.12));
+  border: 3px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4), inset 0 0 22px rgba(255, 126, 179, 0.25);
+  touch-action: none;
+  z-index: 20;
+}
+.joystick.move { left: 28px; }
+.joystick.aim  { right: 28px; }
+.joystick .knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--joy-knob);
+  height: var(--joy-knob);
+  margin-left: calc(var(--joy-knob) / -2);
+  margin-top: calc(var(--joy-knob) / -2);
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ffd6e8, #ff7eb3 60%, #e23e7a);
+  border: 3px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+.joystick .knob.pink {
+  background: radial-gradient(circle at 40% 35%, #fff, #ff7eb3 55%, #e23e7a);
+}
+
+/* ---------- Shoot button ---------- */
+.shoot-btn {
+  position: fixed;
+  right: 196px;
+  bottom: 52px;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: radial-gradient(circle at 42% 35%, #ff9ec7, var(--pink-deep) 70%);
+  box-shadow: 0 6px 0 #b81d57, 0 8px 18px rgba(0, 0, 0, 0.45);
+  z-index: 20;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.shoot-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b81d57, 0 5px 12px rgba(0, 0, 0, 0.45); }
+.shoot-btn .ball {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #fff, #ffd6e8 60%, #ff7eb3);
+  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.7);
+}
+
+.hint {
+  position: fixed;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  font-size: 0.45rem;
+  color: #fff;
+  opacity: 0.6;
+  text-shadow: 0 1px 3px #000;
+  z-index: 20;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ---------- Game over overlay ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 14, 22, 0.82);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+.overlay.show { display: flex; }
+.panel {
+  text-align: center;
+  color: #fff;
+  background: rgba(226, 62, 122, 0.18);
+  border: 4px solid #fff;
+  border-radius: 24px;
+  padding: 40px 36px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.panel h1 { font-size: 1.6rem; color: #ffd6e8; text-shadow: 3px 3px 0 #b81d57; }
+.panel p { margin-top: 18px; font-size: 0.7rem; line-height: 1.7; }
+.play-again {
+  margin-top: 26px;
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: #fff;
+  background: var(--pink-deep);
+  border: 3px solid #fff;
+  padding: 16px 22px;
+  border-radius: 16px;
+  box-shadow: 0 5px 0 #b81d57;
+  cursor: pointer;
+}
+.play-again:active { transform: translateY(3px); box-shadow: 0 2px 0 #b81d57; }
+.menu-link2 { display: inline-block; margin-top: 16px; }

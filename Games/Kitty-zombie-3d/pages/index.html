@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Kitty vs Zombie 3D</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/game.css" />
+  </head>
+  <body>
+    <!-- Camera viewport holds the scrolling world -->
+    <div class="viewport">
+      <div class="world" id="world">
+        <div class="player" id="player"></div>
+        <!-- zombies + projectiles are injected here -->
+      </div>
+    </div>
+
+    <!-- Top bar: health + wave + score -->
+    <div class="topbar">
+      <div class="hp">
+        <span class="heart">&#10084;</span>
+        <div class="hp-track"><div class="hp-fill" id="hpFill"></div></div>
+      </div>
+
+      <div class="wave-info">
+        <div class="wave-label">WAVE <span id="waveNum">1</span></div>
+        <div class="wave-sub" id="waveSub">Get ready&hellip;</div>
+      </div>
+
+      <div class="score-info">
+        <span class="skull">&#128128;</span>
+        <span id="kills">0</span>
+        <a class="menu-link" href="../../Home.html">Menu</a>
+      </div>
+    </div>
+
+    <!-- Center wave banner -->
+    <div class="banner" id="banner"></div>
+
+    <!-- LEFT joystick: move -->
+    <div class="joystick move" id="joystick">
+      <div class="knob" id="knob"></div>
+    </div>
+
+    <!-- RIGHT joystick: aim + auto-fire pink balls -->
+    <div class="joystick aim" id="aimStick">
+      <div class="knob pink" id="aimKnob"></div>
+    </div>
+
+    <!-- Shoot button (fires in the way you're facing) -->
+    <button class="shoot-btn" id="shootBtn">
+      <span class="ball"></span>
+    </button>
+
+    <p class="hint">
+      Left stick = walk &bull; Right stick = aim &amp; shoot &bull; Button = fire
+    </p>
+
+    <!-- Game over overlay -->
+    <div class="overlay" id="overlay">
+      <div class="panel">
+        <h1 id="overTitle">Game Over</h1>
+        <p id="overSub"></p>
+        <button class="play-again" id="restartBtn">&#9654; Play Again</button>
+        <a class="menu-link2" href="../../Home.html">Back to Menu</a>
+      </div>
+    </div>
+
+    <script src="../js/game.js"></script>
+  </body>
+</html>
