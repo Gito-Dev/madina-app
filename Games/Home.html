@@ -116,6 +116,14 @@
       .machine.zombie .nm { color: #ecd9ff; text-shadow: 0 0 10px var(--purple); }
       .machine.zombie .go { background: var(--purple); }
 
+      .machine.fruit {
+        border: 3px solid var(--cyan);
+        box-shadow: 0 0 16px var(--cyan), inset 0 0 16px rgba(94, 241, 255, 0.25);
+      }
+      .machine.fruit:hover { box-shadow: 0 0 28px var(--cyan), inset 0 0 18px rgba(94, 241, 255, 0.4); }
+      .machine.fruit .nm { color: #d6fbff; text-shadow: 0 0 10px var(--cyan); }
+      .machine.fruit .go { background: var(--cyan); }
+
       @media (max-width: 560px) {
         .machine { width: 78vw; max-width: 320px; }
       }
@@ -137,6 +145,13 @@
         <a class="machine zombie" href="Kitty-zombie-3d/pages/start.html">
           <div class="emoji">&#128049;&#129482;</div>
           <div class="nm">KITTY VS ZOMBIE</div>
+          <span class="go">&#9654; PLAY</span>
+        </a>
+
+        <!-- Fruit Merge -->
+        <a class="machine fruit" href="Fruit-Merge/pages/game.html">
+          <div class="emoji">&#127827;&#127819;</div>
+          <div class="nm">FRUIT MERGE</div>
           <span class="go">&#9654; PLAY</span>
         </a>
       </div>

@@ -1,0 +1,255 @@
+:root {
+  --pix: "Press Start 2P", monospace;
+  --pink: #ff7eb3;
+  --pink-deep: #e23e7a;
+  --pink-soft: #ffd6e8;
+  --cyan: #5ef1ff;
+  --gold: #ffd36e;
+  --ink: #3a1326;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  font-family: var(--pix);
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  color: #fff;
+  background:
+    radial-gradient(circle at 20% 12%, rgba(255,255,255,0.35) 0, transparent 34%),
+    radial-gradient(circle at 82% 86%, rgba(255,255,255,0.25) 0, transparent 34%),
+    linear-gradient(165deg, #ffe9f3 0%, #ffd6ea 46%, #ece1ff 120%);
+}
+
+.wrap {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center;
+  padding: 8px 8px env(safe-area-inset-bottom);
+}
+
+/* ---------------- Top HUD ---------------- */
+.hud {
+  width: 100%;
+  max-width: var(--game-w, 480px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+/* every top-bar cell shares one height so the row lines up cleanly */
+.chip, .next-box, .icon-btn {
+  height: 64px;
+  background: rgba(40, 16, 44, 0.62);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+}
+.chip {
+  flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  padding: 0 6px;
+}
+.chip .k { font-size: 0.4rem; opacity: 0.75; letter-spacing: 1px; }
+.chip .v { font-size: 0.74rem; color: var(--gold); }
+.chip.score .v { color: #fff; font-size: 0.9rem; }
+.chip.coins .v { color: var(--cyan); }
+
+#coinChip.flash { animation: shakeRed 0.4s; }
+@keyframes shakeRed {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); border-color: #ff3b5b; }
+  60% { transform: translateX(4px); border-color: #ff3b5b; }
+}
+
+.next-box {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 4px 8px 2px;
+}
+.next-box .k { font-size: 0.38rem; opacity: 0.75; margin-bottom: 2px; }
+#nextImg {
+  width: 46px; height: 46px;                /* taller / bigger preview */
+  background: center / 240% no-repeat;       /* zoom past the PNG's transparent padding */
+}
+
+.mini-btns { display: flex; gap: 6px; flex: 0 0 auto; }
+.icon-btn {
+  width: 44px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 0.72rem;
+  cursor: pointer;
+}
+.icon-btn:active { transform: scale(0.92); }
+
+/* ---------------- Canvas ---------------- */
+.stage { position: relative; flex: 0 0 auto; }
+#game {
+  display: block;
+  border-radius: 14px;
+  touch-action: none;
+}
+
+.tool-hint {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  border: 2px solid var(--cyan);
+  color: var(--cyan);
+  font-size: 0.5rem;
+  padding: 7px 12px; border-radius: 10px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s;
+  white-space: nowrap; z-index: 4;
+}
+.tool-hint.show { opacity: 1; animation: hintPulse 0.8s infinite alternate; }
+@keyframes hintPulse { to { box-shadow: 0 0 14px var(--cyan); } }
+
+/* ---------------- Evolution guide ---------------- */
+.guide {
+  width: 100%; max-width: var(--game-w, 480px);
+  margin-top: 8px;
+  display: flex; gap: 2px; justify-content: center; align-items: center;
+  padding: 5px 7px;
+  background: rgba(28, 10, 30, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+}
+.g-fruit {
+  flex: 1 1 0; max-width: 32px; aspect-ratio: 1;
+  background-repeat: no-repeat; background-position: center;
+  opacity: 0.3;
+  transition: opacity 0.2s, transform 0.2s, filter 0.2s;
+}
+.g-fruit.reached { opacity: 1; transform: scale(1.08); }
+
+/* ---------------- Powerups / inventory ---------------- */
+.bar-title {
+  width: 100%; max-width: var(--game-w, 480px);
+  margin: 10px 0 5px;
+  font-size: 0.4rem; letter-spacing: 1px;
+  color: #7a3158; text-align: center; opacity: 0.9;
+}
+.powerbar {
+  width: 100%; max-width: var(--game-w, 480px);
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 7px;
+}
+.pu {
+  position: relative;
+  background: linear-gradient(180deg, rgba(62,22,58,0.82), rgba(34,12,34,0.82));
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 14px;
+  padding: 8px 2px 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.15s, border-color 0.15s, background 0.15s;
+}
+.pu:active { transform: scale(0.92); }
+.pu .pic { width: 32px; height: 32px; background: center / 210% no-repeat; }
+.pu .nm {
+  font-size: 0.32rem; letter-spacing: 0.5px;
+  color: #fff; opacity: 0.82;
+}
+.pu .badge {
+  position: absolute; top: -7px; right: -7px;
+  min-width: 20px; height: 20px; line-height: 18px;
+  padding: 0 4px;
+  background: var(--cyan); color: #11343d;
+  font-size: 0.44rem; border-radius: 10px;
+  border: 2px solid #11343d; text-align: center;
+  box-shadow: 0 0 8px var(--cyan);
+  z-index: 2;
+}
+.pu .cost {
+  font-size: 0.4rem; color: var(--gold);
+  display: flex; align-items: center; gap: 2px;
+}
+.pu .cost::before { content: "◈"; color: var(--cyan); }
+.pu.armed {
+  border-color: var(--cyan);
+  box-shadow: 0 0 16px var(--cyan);
+  background: linear-gradient(180deg, rgba(42,30,72,0.92), rgba(18,34,48,0.92));
+}
+.pu.disabled { opacity: 0.42; }
+
+/* ---------------- Overlays ---------------- */
+.overlay {
+  position: fixed; inset: 0; z-index: 20;
+  display: none;
+  align-items: center; justify-content: center;
+  background: rgba(20, 8, 24, 0.78);
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+.overlay.show { display: flex; }
+.panel {
+  width: 100%; max-width: 340px;
+  background: linear-gradient(160deg, #2a0f24, #401636);
+  border: 3px solid var(--pink);
+  border-radius: 20px;
+  box-shadow: 0 0 28px rgba(255,126,179,0.5);
+  padding: 26px 22px;
+  text-align: center;
+}
+.panel h1 { font-size: 1.1rem; color: var(--pink); text-shadow: 0 0 10px var(--pink-deep); margin-bottom: 6px; }
+.panel h2 { font-size: 0.9rem; color: var(--gold); margin-bottom: 16px; }
+.panel p.lead { font-size: 0.5rem; line-height: 1.8; opacity: 0.85; margin-bottom: 18px; }
+
+.stat-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-bottom: 20px;
+}
+.stat {
+  background: rgba(0,0,0,0.3);
+  border: 2px solid rgba(255,255,255,0.18);
+  border-radius: 12px; padding: 10px 6px;
+}
+.stat .k { font-size: 0.42rem; opacity: 0.8; display: block; margin-bottom: 6px; }
+.stat .v { font-size: 0.8rem; color: var(--gold); }
+
+.btn {
+  display: block; width: 100%;
+  font-family: var(--pix); font-size: 0.68rem;
+  color: #2a0f24; background: var(--pink);
+  border: none; border-radius: 14px;
+  padding: 14px; margin-top: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--pink-deep);
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--pink-deep); }
+.btn.alt { background: var(--cyan); box-shadow: 0 4px 0 #2bb6c9; }
+.btn.ghost { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.4); box-shadow: none; }
+a.btn { text-decoration: none; text-align: center; }
+
+/* intro chain preview */
+.chain {
+  display: flex; flex-wrap: wrap; gap: 4px; justify-content: center;
+  margin: 6px 0 16px;
+}
+.chain img { width: 30px; height: 30px; transform: scale(1.5); }
+.chain .arrow { color: var(--pink); font-size: 0.6rem; align-self: center; }
+
+@media (max-height: 720px) {
+  .chip .k, .next-box .k { display: none; }
+  .panel { padding: 20px 18px; }
+}
+
+/* ---------------- iPad / tablets: bigger text & touch targets ---------------- */
+@media (min-width: 700px) {
+  html { font-size: 21px; }                 /* scales all rem-based text up */
+  .wrap { padding: 14px 14px env(safe-area-inset-bottom); }
+  .chip, .next-box, .icon-btn { height: 84px; border-radius: 18px; }
+  #nextImg { width: 62px; height: 62px; }
+  .icon-btn { width: 62px; }
+  .g-fruit { max-width: 56px; }
+  .guide { padding: 8px 12px; border-radius: 16px; }
+  .pu { border-radius: 18px; padding: 12px 4px 9px; gap: 5px; }
+  .pu .pic { width: 48px; height: 48px; }
+  .pu .badge { min-width: 26px; height: 26px; line-height: 24px; border-radius: 13px; }
+  .panel { max-width: 460px; padding: 36px 30px; border-radius: 26px; }
+  .chain img { width: 40px; height: 40px; }
+}

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Fruit Merge 🍓</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/game.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <!-- Top HUD -->
+      <div class="hud">
+        <div class="chip score">
+          <span class="k">SCORE</span><span class="v" id="score">0</span>
+        </div>
+        <div class="chip coins" id="coinChip">
+          <span class="k">COINS</span><span class="v" id="coins">0</span>
+        </div>
+        <div class="chip">
+          <span class="k">BEST</span><span class="v" id="hi">0</span>
+        </div>
+        <div class="next-box">
+          <span class="k">NEXT</span>
+          <div id="nextImg"></div>
+        </div>
+        <div class="mini-btns">
+          <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+          <button class="icon-btn" id="pauseBtn" title="Pause">❚❚</button>
+        </div>
+      </div>
+
+      <!-- Play field -->
+      <div class="stage">
+        <canvas id="game"></canvas>
+        <div class="tool-hint" id="toolHint">TAP A FRUIT</div>
+      </div>
+
+      <!-- Evolution guide: every fruit in order -->
+      <div class="guide" id="guide"></div>
+
+      <!-- Power-ups / inventory -->
+      <div class="bar-title">POWER-UPS &mdash; tap to use</div>
+      <div class="powerbar">
+        <div class="pu" data-pu="hammer">
+          <div
+            class="pic"
+            style="background-image: url(../assets/hammer.png)"
+          ></div>
+          <span class="nm">SMASH</span><span class="cost">25</span>
+        </div>
+        <div class="pu" data-pu="bomb">
+          <span class="badge" id="bombBadge">x1</span>
+          <div
+            class="pic"
+            style="background-image: url(../assets/bomb.png)"
+          ></div>
+          <span class="nm">BOMB</span><span class="cost">200</span>
+        </div>
+        <div class="pu" data-pu="shrink">
+          <div
+            class="pic"
+            style="background-image: url(../assets/shrink.png)"
+          ></div>
+          <span class="nm">SHRINK</span><span class="cost">15</span>
+        </div>
+        <div class="pu" data-pu="grow">
+          <div
+            class="pic"
+            style="background-image: url(../assets/grow.png)"
+          ></div>
+          <span class="nm">GROW</span><span class="cost">15</span>
+        </div>
+        <div class="pu" data-pu="undo">
+          <div
+            class="pic"
+            style="background-image: url(../assets/undo.png)"
+          ></div>
+          <span class="nm">UNDO</span><span class="cost">35</span>
+        </div>
+        <div class="pu" data-pu="reroll">
+          <div
+            class="pic"
+            style="background-image: url(../assets/reroll.png)"
+          ></div>
+          <span class="nm">SWAP</span><span class="cost">8</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Intro -->
+    <div class="overlay" id="intro">
+      <div class="panel">
+        <h1>🍓 FRUIT MERGE</h1>
+        <h2>for Madina 💗</h2>
+        <p class="lead">
+          Drop fruits. Touch two of the same to merge them into the next one.
+          Climb the chain — can you reach the Madina ball?
+        </p>
+        <div class="chain">
+          <img src="../assets/blueberry.png" /><span class="arrow">›</span>
+          <img src="../assets/radish.png" /><span class="arrow">›</span>
+          <img src="../assets/straberry.png" /><span class="arrow">›</span>
+          <img src="../assets/onion.png" /><span class="arrow">›</span>
+          <img src="../assets/orange.png" /><span class="arrow">›</span>
+          <img src="../assets/apple.png" /><span class="arrow">…</span>
+          <img src="../assets/watermelon.png" /><span class="arrow">›</span>
+          <img src="../assets/gito-ball.png" /><span class="arrow">›</span>
+          <img src="../assets/madina-ball.png" />
+        </div>
+        <button class="btn" id="startBtn">▶ PLAY</button>
+        <a class="btn ghost" href="../../Home.html">⌂ ARCADE</a>
+      </div>
+    </div>
+
+    <!-- Pause -->
+    <div class="overlay" id="pauseOverlay">
+      <div class="panel">
+        <h1>PAUSED</h1>
+        <button class="btn" id="resumeBtn">▶ RESUME</button>
+        <a class="btn ghost" href="../../Home.html">⌂ ARCADE</a>
+      </div>
+    </div>
+
+    <!-- Game over -->
+    <div class="overlay" id="overlay">
+      <div class="panel">
+        <h1>GAME OVER</h1>
+        <div class="stat-grid">
+          <div class="stat">
+            <span class="k">SCORE</span><span class="v" id="finalScore">0</span>
+          </div>
+          <div class="stat">
+            <span class="k">BEST</span><span class="v" id="finalHi">0</span>
+          </div>
+          <div class="stat">
+            <span class="k">COINS</span><span class="v" id="finalCoins">0</span>
+          </div>
+          <div class="stat">
+            <span class="k">TOP FRUIT</span
+            ><span class="v" id="finalBig">—</span>
+          </div>
+        </div>
+        <button class="btn" id="againBtn">↻ PLAY AGAIN</button>
+        <a class="btn ghost" href="../../Home.html">⌂ ARCADE</a>
+      </div>
+    </div>
+
+    <script src="../js/audio.js"></script>
+    <script src="../js/game.js"></script>
+  </body>
+</html>
